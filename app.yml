@@ -1,0 +1,11 @@
+install:
+  commands:
+    - ["npm", "ci", "--include=dev"]
+
+run:
+  command: ["node", ".next/standalone/server.js"]
+
+profile:
+  label: "Employee Onboarding Tracker"
+  description: "Track new hire onboarding progress through all phases from offer to CaptivateIQ configuration."
+  icon: icon.svg

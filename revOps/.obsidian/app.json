@@ -1,0 +1,12 @@
+{
+  "defaultViewMode": "preview",
+  "foldHeading": false,
+  "foldIndent": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "People",
+  "attachmentFolderPath": "Assets",
+  "legacyEditor": false,
+  "promptDelete": true,
+  "strictLineBreaks": false,
+  "showFrontmatter": false
+}

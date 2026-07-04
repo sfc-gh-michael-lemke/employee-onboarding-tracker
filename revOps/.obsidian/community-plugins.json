@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": [
+    "templater-obsidian",
+    "dataview",
+    "obsidian-kanban",
+    "tag-wrangler"
+  ]
+}

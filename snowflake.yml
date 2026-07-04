@@ -1,0 +1,30 @@
+definition_version: "2"
+
+entities:
+  employee_onboarding_tracker:
+    type: snowflake-app
+    identifier:
+      name: EMPLOYEE_ONBOARDING_TRACKER
+      database: APPS
+      schema: PUBLIC
+    artifacts:
+      - src: ./*
+        dest: ./
+        ignore:
+          - node_modules
+          - .env*
+          - __pycache__
+          - "*.pyc"
+          - .next
+          - .git
+          - snowflake.log
+          - output
+
+    query_warehouse: APP_WAREHOUSE
+    build_compute_pool:
+      name: SNOW_APPS_DEFAULT_COMPUTE_POOL
+    service_compute_pool:
+      name: SNOW_APPS_DEFAULT_COMPUTE_POOL
+    build_eai:
+      name: APPS_BUILD_EAI
+    code_stage: EMPLOYEE_ONBOARDING_TRACKER_CODE
