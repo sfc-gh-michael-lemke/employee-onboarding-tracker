@@ -40,10 +40,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params
     const body = await req.json()
 
-    if ("notes" in body) {
+    // Update employee profile fields
+    const profileFields: Record<string, string> = {}
+    if ("full_name"  in body) profileFields["FULL_NAME"]  = sql(body.full_name)
+    if ("title"      in body) profileFields["TITLE"]      = sql(body.title)
+    if ("start_date" in body) profileFields["START_DATE"] = sql(body.start_date)
+    if ("manager"    in body) profileFields["MANAGER"]    = sql(body.manager)
+    if ("territory"  in body) profileFields["TERRITORY"]  = sql(body.territory)
+    if ("notes"      in body) profileFields["NOTES"]      = sql(body.notes)
+
+    if (Object.keys(profileFields).length > 0) {
+      const sets = Object.entries(profileFields).map(([col, val]) => `${col} = ${val}`).join(", ")
       await querySnowflake(`
         UPDATE TEMP.MLEMKE.ONBOARDING_EMPLOYEES
-        SET NOTES = ${sql(body.notes)}, UPDATED_AT = CURRENT_TIMESTAMP()
+        SET ${sets}, UPDATED_AT = CURRENT_TIMESTAMP()
         WHERE ID = '${id.replace(/'/g, "''")}'
       `)
     }

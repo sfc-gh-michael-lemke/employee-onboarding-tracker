@@ -28,3 +28,16 @@ entities:
     build_eai:
       name: APPS_BUILD_EAI
     code_stage: EMPLOYEE_ONBOARDING_TRACKER_CODE
+
+  onboarding_checks:
+    type: streamlit
+    identifier:
+      name: ONBOARDING_CHECKS
+      database: TEMP
+      schema: MLEMKE
+    stage: ONBOARDING_CHECKS_STAGE
+    main_file: streamlit_checks.py
+    query_warehouse: SNOWHOUSE
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
+    compute_pool: SNOW_APPS_DEFAULT_COMPUTE_POOL
+    title: "Onboarding Phase Checks"

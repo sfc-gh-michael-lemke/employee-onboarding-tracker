@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { Employee } from "@/app/page"
 import { getCurrentPhase } from "@/lib/phases"
 import { AddEmployeeDialog } from "@/components/add-employee-dialog"
@@ -38,6 +38,22 @@ export function OnboardingApp({
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployees[0]?.ID ?? null)
   const [showAdd, setShowAdd] = useState(false)
   const [design, setDesign] = useState<Design>("kanban")
+
+  // Poll for checklist updates (e.g. auto-checks from /phases)
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/employees")
+      if (res.ok) {
+        const data = await res.json()
+        setEmployees(data)
+      }
+    } catch { /* silent */ }
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(refresh, 15_000)
+    return () => clearInterval(id)
+  }, [refresh])
 
   const handleToggleCheck = (empId: string, phaseKey: string, itemKey: string, isChecked: boolean) => {
     setEmployees((prev) =>

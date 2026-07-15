@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const employees = await querySnowflake(`
       SELECT ID, FULL_NAME, TITLE, TO_VARCHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE, 
-             MANAGER, TERRITORY, NOTES, CREATED_AT
+             MANAGER, TERRITORY, NOTES, EMAIL, CREATED_AT
       FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES
       ORDER BY CREATED_AT DESC
     `)
@@ -53,18 +53,18 @@ function getCurrentPhase(checklist: Record<string, Record<string, boolean>>): st
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { fullName, title, startDate, manager, territory, notes } = body
+    const { fullName, email, title, startDate, manager, territory, notes } = body
 
     if (!fullName) return Response.json({ error: "fullName is required" }, { status: 400 })
 
     const [result] = (await querySnowflake(`
-      INSERT INTO TEMP.MLEMKE.ONBOARDING_EMPLOYEES (FULL_NAME, TITLE, START_DATE, MANAGER, TERRITORY, NOTES)
-      VALUES (${sql(fullName)}, ${sql(title)}, ${sqlDate(startDate)}, ${sql(manager)}, ${sql(territory)}, ${sql(notes)})
+      INSERT INTO TEMP.MLEMKE.ONBOARDING_EMPLOYEES (FULL_NAME, EMAIL, TITLE, START_DATE, MANAGER, TERRITORY, NOTES)
+      VALUES (${sql(fullName)}, ${sql(email)}, ${sql(title)}, ${sqlDate(startDate)}, ${sql(manager)}, ${sql(territory)}, ${sql(notes)})
     `)) as Array<{ "number of rows inserted": number }>
 
     const [newEmp] = (await querySnowflake(`
       SELECT ID, FULL_NAME, TITLE, TO_VARCHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE,
-             MANAGER, TERRITORY, NOTES
+             MANAGER, TERRITORY, NOTES, EMAIL
       FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES
       WHERE FULL_NAME = ${sql(fullName)}
       ORDER BY CREATED_AT DESC

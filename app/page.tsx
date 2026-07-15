@@ -59,6 +59,7 @@ export interface Employee {
   MANAGER: string
   TERRITORY: string
   NOTES: string
+  EMAIL: string | null
   checklist: Record<string, Record<string, boolean>>
   checkedCount: number
   currentPhase: string

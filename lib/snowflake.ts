@@ -418,6 +418,11 @@ function queryWithPool(
   authTag: string,
 ): Promise<Record<string, any>[]> {
   return pool.use(async (conn) => {
+    // Activate secondary roles so grants on SNOW_CERTIFIED and other DBs are available
+    await new Promise<void>((res, rej) => conn.execute({
+      sqlText: "USE SECONDARY ROLES ALL",
+      complete: (err) => err ? rej(new Error(`Secondary roles: ${err.message}`)) : res(),
+    }))
     const t0 = Date.now()
     sfLog(`query start mode=${authTag} sql=${JSON.stringify(previewSql(query))}`)
     return new Promise<Record<string, any>[]>((res, rej) => {
@@ -555,13 +560,11 @@ export async function querySnowflake(query: string, options: QueryOptions = {}):
   if (serviceToken) {
     if (callersRights) {
       const callerToken = (await headers()).get("sf-context-current-user-token") ?? ""
-      if (!callerToken) {
-        throw new Error(
-          "No sf-context-current-user-token header. Ensure the app is running in SPCS with caller's rights enabled.",
-        )
+      if (callerToken) {
+        const combinedToken = serviceToken + "." + callerToken
+        return queryWithPool(getCallersPool(combinedToken, serviceToken), query, "spcs-caller")
       }
-      const combinedToken = serviceToken + "." + callerToken
-      return queryWithPool(getCallersPool(combinedToken, serviceToken), query, "spcs-caller")
+      sfLog("caller's rights requested but no sf-context-current-user-token header — falling back to owner's rights")
     }
     return queryWithPool(getOwnersPool(serviceToken), query, "spcs-owner")
   }
@@ -605,18 +608,16 @@ export async function querySnowflakeLongRunning(
   if (serviceToken) {
     if (callersRights) {
       const callerToken = (await headers()).get("sf-context-current-user-token") ?? ""
-      if (!callerToken) {
-        throw new Error(
-          "No sf-context-current-user-token header. Ensure the app is running in SPCS with caller's rights enabled.",
+      if (callerToken) {
+        const combinedToken = serviceToken + "." + callerToken
+        return queryWithPoolLongRunning(
+          getCallersPool(combinedToken, serviceToken),
+          query,
+          "spcs-caller",
+          longOpts,
         )
       }
-      const combinedToken = serviceToken + "." + callerToken
-      return queryWithPoolLongRunning(
-        getCallersPool(combinedToken, serviceToken),
-        query,
-        "spcs-caller",
-        longOpts,
-      )
+      sfLog("caller's rights requested but no sf-context-current-user-token header — falling back to owner's rights")
     }
     return queryWithPoolLongRunning(getOwnersPool(serviceToken), query, "spcs-owner", longOpts)
   }

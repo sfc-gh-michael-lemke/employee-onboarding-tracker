@@ -6,3 +6,17 @@ node_modules/
 *.log
 snowflake.log
 dist/
+Future of RevOps/
+.snowflake/
+pyproject.toml
+service-spec.yaml
+streamlit_checks.py
+__pycache__/
+*.py
+*.pyc
+future-of-revops*
+batch*_slides*
+intelligence_layer/
+intelligence_layer*
+revops_deck*
+territory_revenue_graph/

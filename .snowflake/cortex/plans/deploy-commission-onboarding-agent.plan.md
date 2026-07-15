@@ -1,16 +1,24 @@
+---
+name: "deploy commission onboarding agent"
+created: "2026-07-09T19:54:35.751Z"
+status: pending
+---
+
 # Deploy Commission Onboarding Cortex Agent
 
 ## Context
 
 ### What was explored
+
 - Vault at `revops_v2/revOps/` — fully built, system prompt lives in `Agents/Commission-Onboarding-Agent.md`
 - Snowflake account: `SFCOGSOPS-SNOWHOUSE_AWS_US_WEST_2`, user `MLEMKE`, role `SALES_ENGINEER`
 - **1,971 existing agents** and **1,280 existing Cortex Search services** in account — none related to RevOps or commission onboarding
-- **MDM.MDM_INTERFACES.DIM_EMPLOYEE** exists: columns `EMPLOYEE_ID`, `PREFERRED_FULL_NAME`, `LEGAL_FULL_NAME`, `IS_ACTIVE`, `WORKER_TYPE`, `WORK_EMAIL`, `SNOWHOUSE_LOGIN_NAME`, `ENTITY_DATA_JSON`, `PROCESS_DATA_JSON`
-- **No quota, commission, payee, or plan tables** are accessible under the SALES_ENGINEER role
-- **Privilege reality**: SALES_ENGINEER has only USAGE on MDM.MDM_INTERFACES (no CREATE AGENT). However, MLEMKE **owns** `USER$MLEMKE.PUBLIC` — OWNERSHIP grants full CREATE privilege including CREATE AGENT, CREATE CORTEX SEARCH SERVICE, CREATE PROCEDURE
+- **MDM.MDM\_INTERFACES.DIM\_EMPLOYEE** exists: columns `EMPLOYEE_ID`, `PREFERRED_FULL_NAME`, `LEGAL_FULL_NAME`, `IS_ACTIVE`, `WORKER_TYPE`, `WORK_EMAIL`, `SNOWHOUSE_LOGIN_NAME`, `ENTITY_DATA_JSON`, `PROCESS_DATA_JSON`
+- **No quota, commission, payee, or plan tables** are accessible under the SALES\_ENGINEER role
+- **Privilege reality**: SALES\_ENGINEER has only USAGE on MDM.MDM\_INTERFACES (no CREATE AGENT). However, MLEMKE **owns** `USER$MLEMKE.PUBLIC` — OWNERSHIP grants full CREATE privilege including CREATE AGENT, CREATE CORTEX SEARCH SERVICE, CREATE PROCEDURE
 
 ### Deployment target
+
 ```
 Agent:    USER$MLEMKE.PUBLIC.REVOPS_COMMISSION_ONBOARDING_AGENT
 Role:     MLEMKE (user-level ownership)
@@ -20,14 +28,14 @@ Schema:   PUBLIC
 
 ### Tool availability matrix
 
-| Tool | Status | Backing resource |
-|------|--------|-----------------|
-| `query_snowhouse` | Live — partial | `MDM.MDM_INTERFACES.DIM_EMPLOYEE` via stored procedure |
-| `search_emails` | Scaffold only | `USER$MLEMKE.PUBLIC.REVOPS_EMAIL_CONTENT` (empty table) |
-| `search_slack` | Scaffold only | `USER$MLEMKE.PUBLIC.REVOPS_SLACK_CONTENT` (empty table) |
-| `search_documents` | Scaffold only | `USER$MLEMKE.PUBLIC.REVOPS_DOCS_CONTENT` (empty table) |
-| `query_captivateiq` | Not available | Needs External Network Access Integration |
-| `query_salesforce` | Not available | Needs External Network Access Integration |
+| Tool                | Status         | Backing resource                                        |
+| ------------------- | -------------- | ------------------------------------------------------- |
+| `query_snowhouse`   | Live — partial | `MDM.MDM_INTERFACES.DIM_EMPLOYEE` via stored procedure  |
+| `search_emails`     | Scaffold only  | `USER$MLEMKE.PUBLIC.REVOPS_EMAIL_CONTENT` (empty table) |
+| `search_slack`      | Scaffold only  | `USER$MLEMKE.PUBLIC.REVOPS_SLACK_CONTENT` (empty table) |
+| `search_documents`  | Scaffold only  | `USER$MLEMKE.PUBLIC.REVOPS_DOCS_CONTENT` (empty table)  |
+| `query_captivateiq` | Not available  | Needs External Network Access Integration               |
+| `query_salesforce`  | Not available  | Needs External Network Access Integration               |
 
 CaptivateIQ and SFDC external API tools require an External Network Access Integration that must be created by a Snowflake admin. These are deferred to Phase 2.
 
@@ -78,7 +86,7 @@ Creates: `revops_v2/USER$MLEMKE_PUBLIC_REVOPS_COMMISSION_ONBOARDING_AGENT/`
 
 ---
 
-### Step 2 — Create query_snowhouse stored procedure
+### Step 2 — Create query\_snowhouse stored procedure
 
 ```sql
 USE ROLE MLEMKE;
@@ -288,6 +296,7 @@ uv run --project "..." python ".../scripts/test_agent.py" \
 ```
 
 Then test identity resolution:
+
 ```bash
 uv run --project "..." python ".../scripts/test_agent.py" \
   --agent-name REVOPS_COMMISSION_ONBOARDING_AGENT \
@@ -295,7 +304,7 @@ uv run --project "..." python ".../scripts/test_agent.py" \
   ...
 ```
 
-Expected: agent calls `query_snowhouse("Michael Lemke")`, returns DIM_EMPLOYEE record, then calls the three search services (which return empty), flags all three as data gaps, and produces a playbook with identity fields populated and Phases 2–6 marked LOW confidence.
+Expected: agent calls `query_snowhouse("Michael Lemke")`, returns DIM\_EMPLOYEE record, then calls the three search services (which return empty), flags all three as data gaps, and produces a playbook with identity fields populated and Phases 2–6 marked LOW confidence.
 
 ---
 
@@ -322,20 +331,20 @@ After deployment, add to `revOps/Agents/Commission-Onboarding-Agent.md`:
 1. `SHOW AGENTS LIKE 'REVOPS_COMMISSION_ONBOARDING_AGENT' IN SCHEMA USER$MLEMKE.PUBLIC;` — agent exists
 2. `DESCRIBE AGENT "USER$MLEMKE".PUBLIC.REVOPS_COMMISSION_ONBOARDING_AGENT;` — spec is correct
 3. Capability query returns tool list without errors
-4. Employee name query resolves DIM_EMPLOYEE record and produces a playbook with identity fields populated
+4. Employee name query resolves DIM\_EMPLOYEE record and produces a playbook with identity fields populated
 5. Playbook file written to `revOps/Playbooks/` with correct YAML frontmatter and wiki links
 
 ---
 
 ## Phase 2 — After data pipelines exist
 
-| Step | What's needed | Owner |
-|------|--------------|-------|
-| Load emails into REVOPS_EMAIL_CONTENT | Gmail/Outlook export or OpenFlow connector | Data Eng |
-| Load Slack into REVOPS_SLACK_CONTENT | Slack export or API connector | Data Eng |
-| Load docs into REVOPS_DOCS_CONTENT | Confluence/Google Docs export | Data Eng |
-| Add CaptivateIQ tool | External Network Access Integration (admin) | Snowflake Admin |
-| Add SFDC tool | External Network Access Integration (admin) | Snowflake Admin |
+| Step                                    | What's needed                               | Owner           |
+| --------------------------------------- | ------------------------------------------- | --------------- |
+| Load emails into REVOPS\_EMAIL\_CONTENT | Gmail/Outlook export or OpenFlow connector  | Data Eng        |
+| Load Slack into REVOPS\_SLACK\_CONTENT  | Slack export or API connector               | Data Eng        |
+| Load docs into REVOPS\_DOCS\_CONTENT    | Confluence/Google Docs export               | Data Eng        |
+| Add CaptivateIQ tool                    | External Network Access Integration (admin) | Snowflake Admin |
+| Add SFDC tool                           | External Network Access Integration (admin) | Snowflake Admin |
 
 ---
 
