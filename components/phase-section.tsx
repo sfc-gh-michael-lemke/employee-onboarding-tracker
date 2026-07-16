@@ -91,7 +91,7 @@ export function PhaseSection({
 
       {/* Items */}
       {open && (
-        <ul className="border-t border-border divide-y divide-border">
+        <ul className="border-t border-border divide-y divide-border/60 bg-muted/20 border-l-2 border-l-primary/20">
           {phase.items.map((item) => {
             const isChecked = checklist[item.key] ?? false
             const key       = `${phase.key}/${item.key}`
@@ -99,7 +99,7 @@ export function PhaseSection({
             const status    = testStatus[key] ?? "idle"
 
             return (
-              <li key={item.key} className="px-4 py-2.5 hover:bg-muted/30 transition-colors">
+              <li key={item.key} className="pl-8 pr-4 py-2.5 hover:bg-muted/40 transition-colors">
                 <div className="flex items-start gap-2">
                   <label className="flex items-start gap-3 cursor-pointer flex-1 min-w-0">
                     <input
