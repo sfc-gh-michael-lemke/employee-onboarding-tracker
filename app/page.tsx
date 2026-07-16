@@ -108,48 +108,6 @@ export default async function BoardsHomePage() {
         </div>
       </div>
 
-      {/* ── Boards section ───────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {hasBoards ? (
-          <>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Your boards</h2>
-              <Link
-                href="/boards/new"
-                className="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                + New Board
-              </Link>
-            </div>
-            <BoardsGrid initialBoards={boards} />
-          </>
-        ) : !error ? (
-          /* Empty state — no boards yet */
-          <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">No boards yet</h3>
-            <p className="text-sm text-gray-400 mb-5">Create your first board to start tracking a process.</p>
-            <Link
-              href="/boards/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors text-sm"
-            >
-              Create first board
-            </Link>
-          </div>
-        ) : null}
-      </div>
-
       {/* ── How it works ─────────────────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-gray-50/60">
         <div className="max-w-5xl mx-auto px-6 py-12">
@@ -235,6 +193,48 @@ export default async function BoardsHomePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Boards section ───────────────────────────────────────────────── */}
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {error && (
+          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {hasBoards ? (
+          <>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Your boards</h2>
+              <Link
+                href="/boards/new"
+                className="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                + New Board
+              </Link>
+            </div>
+            <BoardsGrid initialBoards={boards} />
+          </>
+        ) : !error ? (
+          /* Empty state — no boards yet */
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">No boards yet</h3>
+            <p className="text-sm text-gray-400 mb-5">Create your first board to start tracking a process.</p>
+            <Link
+              href="/boards/new"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors text-sm"
+            >
+              Create first board
+            </Link>
+          </div>
+        ) : null}
       </div>
     </main>
   )
