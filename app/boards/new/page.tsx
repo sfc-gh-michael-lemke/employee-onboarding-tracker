@@ -37,6 +37,27 @@ interface ExtractResult {
 
 type Step = "drop" | "extracting" | "preview" | "creating"
 
+// ── PDF text extraction (pdfjs-dist) ─────────────────────────────────────────
+async function extractPdfText(file: File): Promise<string> {
+  const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist")
+  GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
+  const pdf = await getDocument({ data: await file.arrayBuffer() }).promise
+  const pages: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    pages.push(content.items.map((it) => ("str" in it ? it.str : "")).join(" "))
+  }
+  return pages.join("\n\n")
+}
+
+// ── DOCX text extraction (mammoth browser build) ──────────────────────────────
+async function extractDocxText(file: File): Promise<string> {
+  const mammoth = await import("mammoth")
+  const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
+  return result.value
+}
+
 export default function NewBoardPage() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -91,6 +112,7 @@ export default function NewBoardPage() {
 
   async function handleFile(file: File) {
     const name = file.name.toLowerCase()
+    setExtractError(null)
     try {
       if (name.endsWith(".csv") || file.type === "text/csv" || file.type === "text/plain") {
         const text = await file.text()
@@ -101,11 +123,14 @@ export default function NewBoardPage() {
         const text = wb.SheetNames.map(n => XLSX.utils.sheet_to_csv(wb.Sheets[n])).join("\n\n")
         runExtract(text)
       } else if (name.endsWith(".pdf")) {
-        setExtractError("PDF files cannot be read directly. Please open the PDF, select all text (Cmd+A), copy it, and paste it in the text box below.")
+        setStep("extracting")
+        const text = await extractPdfText(file)
+        runExtract(text)
       } else if (name.endsWith(".docx") || name.endsWith(".doc")) {
-        setExtractError("Word documents cannot be read directly. Please open the file, select all text (Cmd+A), copy it, and paste it in the text box below.")
+        setStep("extracting")
+        const text = await extractDocxText(file)
+        runExtract(text)
       } else {
-        // Try as plain text
         const text = await file.text()
         runExtract(text)
       }
@@ -249,7 +274,7 @@ export default function NewBoardPage() {
               <>
                 <div className="text-4xl mb-3">&#128196;</div>
                 <p className="text-base font-medium text-gray-700">Drop a document here</p>
-                <p className="text-sm text-gray-400 mt-1">PDF, Word (.docx), Excel (.xlsx), or CSV</p>
+                <p className="text-sm text-gray-400 mt-1">PDF, Word (.docx), Excel (.xlsx / .xls), or CSV</p>
                 <p className="text-xs text-gray-300 mt-3">or click to browse</p>
               </>
             )}
