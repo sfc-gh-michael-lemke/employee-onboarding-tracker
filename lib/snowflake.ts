@@ -186,9 +186,12 @@ function baseConfig(): snowflake.ConnectionOptions {
   if (process.env.SNOWFLAKE_ACCOUNT) base.account = process.env.SNOWFLAKE_ACCOUNT
   if (process.env.SNOWFLAKE_WAREHOUSE) base.warehouse = process.env.SNOWFLAKE_WAREHOUSE
   if (process.env.SNOWFLAKE_ACCOUNT_URL) base.accessUrl = process.env.SNOWFLAKE_ACCOUNT_URL
-  // SNOWFLAKE_HOST is commonly injected by eval/CI frameworks
+  // SNOWFLAKE_HOST is injected by SPCS and eval/CI frameworks.
+  // SPCS injects underscores in the region suffix (e.g. snowhouse_aws_us_west_2)
+  // but HTTP hostnames require hyphens — normalize before building the URL.
   if (!base.accessUrl && process.env.SNOWFLAKE_HOST) {
-    base.accessUrl = `https://${process.env.SNOWFLAKE_HOST}`
+    const host = process.env.SNOWFLAKE_HOST.replace(/_/g, "-")
+    base.accessUrl = `https://${host}`
   }
   if (process.env.SNOWFLAKE_ROLE) base.role = process.env.SNOWFLAKE_ROLE
   if (process.env.SNOWFLAKE_DATABASE) base.database = process.env.SNOWFLAKE_DATABASE
