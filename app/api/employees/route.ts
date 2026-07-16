@@ -4,13 +4,16 @@ import type { NextRequest } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const boardId = new URL(req.url).searchParams.get("board_id")
+    const boardFilter = boardId ? `WHERE BOARD_ID = '${boardId.replace(/'/g, "''")}'` : ""
     const employees = await querySnowflake(`
       SELECT ID, FULL_NAME, TITLE, TO_VARCHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE, 
-             MANAGER, TERRITORY, NOTES, EMAIL, CREATED_AT,
+             MANAGER, TERRITORY, NOTES, EMAIL, BOARD_ID, CREATED_AT,
              COALESCE(CUSTOM_DATA, PARSE_JSON('{}')) AS CUSTOM_DATA
       FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES
+      ${boardFilter}
       ORDER BY CREATED_AT DESC
     `)
 
@@ -54,13 +57,13 @@ function getCurrentPhase(checklist: Record<string, Record<string, boolean>>): st
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { fullName, email, title, startDate, manager, territory, notes } = body
+    const { fullName, email, title, startDate, manager, territory, notes, boardId } = body
 
     if (!fullName) return Response.json({ error: "fullName is required" }, { status: 400 })
 
     const [result] = (await querySnowflake(`
-      INSERT INTO TEMP.MLEMKE.ONBOARDING_EMPLOYEES (FULL_NAME, EMAIL, TITLE, START_DATE, MANAGER, TERRITORY, NOTES)
-      VALUES (${sql(fullName)}, ${sql(email)}, ${sql(title)}, ${sqlDate(startDate)}, ${sql(manager)}, ${sql(territory)}, ${sql(notes)})
+      INSERT INTO TEMP.MLEMKE.ONBOARDING_EMPLOYEES (FULL_NAME, EMAIL, TITLE, START_DATE, MANAGER, TERRITORY, NOTES, BOARD_ID)
+      VALUES (${sql(fullName)}, ${sql(email)}, ${sql(title)}, ${sqlDate(startDate)}, ${sql(manager)}, ${sql(territory)}, ${sql(notes)}, ${sql(boardId)})
     `)) as Array<{ "number of rows inserted": number }>
 
     const [newEmp] = (await querySnowflake(`

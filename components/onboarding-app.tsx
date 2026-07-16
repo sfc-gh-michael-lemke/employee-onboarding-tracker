@@ -30,9 +30,13 @@ const DESIGNS: { key: Design; label: string; Icon: React.ComponentType<{ size?: 
 export function OnboardingApp({
   initialEmployees,
   initialError,
+  boardId,
+  boardName,
 }: {
   initialEmployees: Employee[]
   initialError: string | null
+  boardId?: string
+  boardName?: string
 }) {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployees[0]?.ID ?? null)
@@ -42,7 +46,8 @@ export function OnboardingApp({
   // Poll for checklist updates (e.g. auto-checks from /phases)
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/employees")
+      const url = boardId ? `/api/employees?board_id=${boardId}` : "/api/employees"
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setEmployees(data)
@@ -105,6 +110,7 @@ export function OnboardingApp({
       body: JSON.stringify({
         fullName: data.fullName, title: data.title, startDate: data.startDate,
         manager: data.manager, territory: data.territory, notes: data.notes,
+        boardId,
       }),
     })
     if (!res.ok) throw new Error((await res.json()).error)
@@ -136,6 +142,9 @@ export function OnboardingApp({
     <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* Design switcher bar */}
       <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 shrink-0">
+        {boardName && (
+          <span className="text-xs font-semibold text-foreground mr-3">{boardName}</span>
+        )}
         <span className="text-xs text-muted-foreground mr-2">Layout:</span>
         {DESIGNS.map(({ key, label, Icon }) => (
           <button
