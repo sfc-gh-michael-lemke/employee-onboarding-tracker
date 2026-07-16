@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import * as XLSX from "xlsx"
 
 interface ExtractedEmployee {
   fullName: string
@@ -38,20 +39,28 @@ export default function NewBoardPage() {
   const [boardName, setBoardName] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
 
-  const runExtract = useCallback(async (formData: FormData) => {
+  const runExtract = useCallback(async (text: string) => {
     setStep("extracting")
     setExtractError(null)
     try {
-      const res = await fetch("/api/boards/extract", { method: "POST", body: formData })
+      const res = await fetch("/api/boards/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Extraction failed")
-      const r: ExtractResult = {
+      const extracted: ExtractResult = {
         boardName: data.boardName ?? "New Board",
-        employees: (data.employees ?? []).map((e: Omit<ExtractedEmployee, "include">) => ({ ...e, include: true })),
-        phases: (data.phases ?? []).map((p: Omit<ExtractedPhase, "include">) => ({ ...p, include: true })),
+        employees: (Array.isArray(data.employees) ? data.employees : []).map(
+          (e: Omit<ExtractedEmployee, "include">) => ({ ...e, include: true })
+        ),
+        phases: (Array.isArray(data.phases) ? data.phases : []).map(
+          (p: Omit<ExtractedPhase, "include">) => ({ ...p, include: true })
+        ),
       }
-      setResult(r)
-      setBoardName(r.boardName)
+      setResult(extracted)
+      setBoardName(extracted.boardName)
       setStep("preview")
     } catch (e) {
       setExtractError(e instanceof Error ? e.message : "Failed")
@@ -59,17 +68,34 @@ export default function NewBoardPage() {
     }
   }, [])
 
-  function handleFile(file: File) {
-    const fd = new FormData()
-    fd.append("file", file)
-    runExtract(fd)
+  async function handleFile(file: File) {
+    const name = file.name.toLowerCase()
+    try {
+      if (name.endsWith(".csv") || file.type === "text/csv" || file.type === "text/plain") {
+        const text = await file.text()
+        runExtract(text)
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || file.type.includes("spreadsheet") || file.type.includes("excel")) {
+        const buf = await file.arrayBuffer()
+        const wb = XLSX.read(buf)
+        const text = wb.SheetNames.map(n => XLSX.utils.sheet_to_csv(wb.Sheets[n])).join("\n\n")
+        runExtract(text)
+      } else if (name.endsWith(".pdf")) {
+        setExtractError("PDF files cannot be read directly. Please open the PDF, select all text (Cmd+A), copy it, and paste it in the text box below.")
+      } else if (name.endsWith(".docx") || name.endsWith(".doc")) {
+        setExtractError("Word documents cannot be read directly. Please open the file, select all text (Cmd+A), copy it, and paste it in the text box below.")
+      } else {
+        // Try as plain text
+        const text = await file.text()
+        runExtract(text)
+      }
+    } catch {
+      setExtractError("Could not read file. Please paste the document text below.")
+    }
   }
 
   function handlePaste() {
     if (!pasteText.trim()) return
-    const fd = new FormData()
-    fd.append("text", pasteText)
-    runExtract(fd)
+    runExtract(pasteText.trim())
   }
 
   function handleDrop(e: React.DragEvent) {
