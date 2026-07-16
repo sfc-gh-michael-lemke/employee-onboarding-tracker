@@ -1,57 +1,23 @@
-import { querySnowflake } from "@/lib/snowflake"
 import Link from "next/link"
-import { BoardsGrid } from "@/components/boards-grid"
 
-export const dynamic = "force-dynamic"
-
-interface Board {
-  ID: string
-  NAME: string
-  DESCRIPTION: string | null
-  CREATED_AT: string
-  EMPLOYEE_COUNT: number
-}
-
-export default async function BoardsHomePage() {
-  let boards: Board[] = []
-  let error: string | null = null
-
-  try {
-    boards = (await querySnowflake(`
-      SELECT b.ID, b.NAME, b.DESCRIPTION, TO_VARCHAR(b.CREATED_AT, 'YYYY-MM-DD') AS CREATED_AT,
-             COUNT(e.ID) AS EMPLOYEE_COUNT
-      FROM TEMP.MLEMKE.ONBOARDING_BOARDS b
-      LEFT JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.BOARD_ID = b.ID
-      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT
-      ORDER BY b.CREATED_AT ASC
-    `)) as Board[]
-  } catch (e) {
-    error = e instanceof Error ? e.message : "Failed to load boards"
-  }
-
-  const hasBoards = boards.length > 0
-
+export default function HomePage() {
   return (
     <main>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white">
         <div className="max-w-5xl mx-auto px-6 py-14">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div className="max-w-xl">
-              <div className="flex items-center gap-2.5 mb-3">
-                <img src="/icon.svg" width="28" height="28" alt="" className="rounded-lg" />
-                <span className="text-sm font-semibold text-indigo-200 tracking-wide uppercase">RevOps Process Hub</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white mb-3">
-                Turn any process doc into a<br className="hidden sm:block" /> live, trackable program.
-              </h1>
-              <p className="text-indigo-200 text-base leading-relaxed">
-                Import your documentation, and AI builds the phases, tasks, and checklists. 
-                Every person on every board gets tracked from day one.
-              </p>
+          <div className="max-w-xl">
+            <div className="flex items-center gap-2.5 mb-3">
+              <img src="/icon.svg" width="28" height="28" alt="" className="rounded-lg" />
+              <span className="text-sm font-semibold text-indigo-200 tracking-wide uppercase">RevOps Process Hub</span>
             </div>
-
-
+            <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white mb-3">
+              Turn any process doc into a<br className="hidden sm:block" /> live, trackable program.
+            </h1>
+            <p className="text-indigo-200 text-base leading-relaxed">
+              Import your documentation, and AI builds the phases, tasks, and checklists.
+              Every person on every board gets tracked from day one.
+            </p>
           </div>
 
           {/* Feature columns */}
@@ -103,53 +69,27 @@ export default async function BoardsHomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-0">
             {[
               {
-                n: "1",
-                color: "bg-indigo-600",
-                title: "Name your board",
+                n: "1", color: "bg-indigo-600", title: "Name your board",
                 desc: "Give the program a name — a cohort, a team, a process. This becomes the home for everyone going through it.",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>
-                  </svg>
-                ),
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>,
               },
               {
-                n: "2",
-                color: "bg-violet-600",
-                title: "Import or build phases",
+                n: "2", color: "bg-violet-600", title: "Import or build phases",
                 desc: "Drop a process doc and AI extracts phases and tasks automatically. Or build the workflow yourself step by step.",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-                  </svg>
-                ),
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>,
               },
               {
-                n: "3",
-                color: "bg-purple-600",
-                title: "Add people",
+                n: "3", color: "bg-purple-600", title: "Add people",
                 desc: "Import employees from a list or add them one by one. Each person gets their own checklist tied to every phase.",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                ),
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
               },
               {
-                n: "4",
-                color: "bg-fuchsia-600",
-                title: "Track & verify",
+                n: "4", color: "bg-fuchsia-600", title: "Track & verify",
                 desc: "Watch every person move through phases in real time. Run Snowflake-backed checks to verify milestones are truly complete.",
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
-                  </svg>
-                ),
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>,
               },
             ].map((step, i, arr) => (
               <div key={step.n} className="flex sm:flex-col items-start sm:items-center gap-4 sm:gap-0 relative">
-                {/* Connecting line (desktop) */}
                 {i < arr.length - 1 && (
                   <div className="hidden sm:block absolute top-6 left-1/2 w-full h-px border-t-2 border-dashed border-gray-200" style={{ left: "50%", width: "100%" }} />
                 )}
@@ -169,60 +109,15 @@ export default async function BoardsHomePage() {
             ))}
           </div>
 
-          {/* Bottom CTA */}
-          {!hasBoards && (
-            <div className="text-center mt-10">
-              <Link
-                href="/boards/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-sm shadow"
-              >
-                Get started — create a board
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Boards section ───────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {hasBoards ? (
-          <>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900">Your boards</h2>
-              <Link
-                href="/boards/new"
-                className="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                + New Board
-              </Link>
-            </div>
-            <BoardsGrid initialBoards={boards} />
-          </>
-        ) : !error ? (
-          /* Empty state — no boards yet */
-          <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">No boards yet</h3>
-            <p className="text-sm text-gray-400 mb-5">Create your first board to start tracking a process.</p>
+          <div className="text-center mt-10">
             <Link
-              href="/boards/new"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors text-sm"
+              href="/boards"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors text-sm shadow"
             >
-              Create first board
+              Go to your boards →
             </Link>
           </div>
-        ) : null}
+        </div>
       </div>
     </main>
   )

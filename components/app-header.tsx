@@ -83,7 +83,7 @@ export function AppHeader() {
       .catch(() => {})
   }, []) // cache hit avoids re-fetching on every nav
 
-  const isBoardActive = pathname === "/" || pathname.startsWith("/boards")
+  const isBoardActive = pathname === "/boards" || pathname.startsWith("/boards/")
   const isAdminActive = pathname.startsWith("/admin")
 
   return (
@@ -98,8 +98,8 @@ export function AppHeader() {
           {/* Boards dropdown */}
           <NavDropdown label="Boards" isActive={isBoardActive}>
             <Link
-              href="/"
-              className={`block px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted transition-colors ${pathname === "/" ? "text-primary" : ""}`}
+              href="/boards"
+              className={`block px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted transition-colors ${pathname === "/boards" ? "text-primary" : ""}`}
             >
               All Boards
             </Link>
