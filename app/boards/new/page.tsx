@@ -48,10 +48,16 @@ export default function NewBoardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Extraction failed")
+      const rawText = await res.text()
+      let data: Record<string, unknown>
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        throw new Error("Service unavailable — please try again in a moment.")
+      }
+      if (!res.ok) throw new Error((data.error as string) ?? "Extraction failed")
       const extracted: ExtractResult = {
-        boardName: data.boardName ?? "New Board",
+        boardName: (data.boardName as string) ?? "New Board",
         employees: (Array.isArray(data.employees) ? data.employees : []).map(
           (e: Omit<ExtractedEmployee, "include">) => ({ ...e, include: true })
         ),
