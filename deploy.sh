@@ -33,10 +33,29 @@ echo ""
 echo "=== Building Docker image ==="
 docker build --platform linux/amd64 -t "$IMAGE" .
 
-# ── 4. Push to Snowflake registry ────────────────────────────────────────────
-# Docker Desktop (signed into Snowflake org) handles token refresh automatically.
-# Running `snow spcs image-registry login` overwrites credentials with a short-
-# lived token that can expire — so we rely on Docker Desktop's integration here.
+# ── 4. Login immediately before push to get the freshest token ───────────────
+echo ""
+echo "=== Logging in to registry ==="
+snow spcs image-registry login
+
+# Write credentials directly to Docker config to bypass credsStore caching
+CRED_JSON=$(printf "%s" "$REGISTRY" | docker-credential-desktop get 2>/dev/null || echo "")
+if [ -n "$CRED_JSON" ]; then
+  python3 - "$REGISTRY" "$CRED_JSON" <<'PYEOF'
+import sys, json, os, base64
+registry = sys.argv[1]
+cred = json.loads(sys.argv[2])
+username = cred.get("Username", "0sessiontoken")
+secret   = cred.get("Secret", "")
+auth     = base64.b64encode(f"{username}:{secret}".encode()).decode()
+path = os.path.expanduser("~/.docker/config.json")
+with open(path) as f: config = json.load(f)
+config.setdefault("auths", {})[registry] = {"auth": auth}
+with open(path, "w") as f: json.dump(config, f, indent=2)
+print("  Credentials written directly to Docker config")
+PYEOF
+fi
+
 echo ""
 echo "=== Pushing to registry ==="
 docker push "$IMAGE"
