@@ -363,7 +363,7 @@ export default function PhasesPage() {
           >
             <span className="text-base leading-none">&#8801;</span> Phase Order
           </button>
-          <a href="/admin" className="text-sm text-blue-600 hover:underline">← Admin</a>
+
         </div>
       </div>
 
