@@ -1,9 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="10" fill="#0a2f5a"/>
-  <rect x="12" y="10" width="24" height="30" rx="3" fill="#1a4080" stroke="#29b5e8" stroke-width="1.5"/>
-  <line x1="17" y1="18" x2="31" y2="18" stroke="#29b5e8" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="17" y1="23" x2="31" y2="23" stroke="#29b5e8" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="17" y1="28" x2="25" y2="28" stroke="#29b5e8" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="33" cy="32" r="6" fill="#29b5e8"/>
-  <path d="M30 32l2 2 4-4" stroke="#0a2f5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="48" height="48" rx="10" fill="#1e1b4b"/>
+
+  <!-- Connection lines -->
+  <line x1="16" y1="13" x2="8"  y2="24" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="16" y1="13" x2="32" y2="13" stroke="#a5b4fc" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="16" y1="13" x2="24" y2="24" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="32" y1="13" x2="24" y2="24" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="32" y1="13" x2="40" y2="24" stroke="#a5b4fc" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="8"  y1="24" x2="16" y2="35" stroke="#a5b4fc" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="8"  y1="24" x2="24" y2="24" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="24" y1="24" x2="40" y2="24" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="24" y1="24" x2="16" y2="35" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="24" y1="24" x2="32" y2="35" stroke="#6366f1" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="40" y1="24" x2="32" y2="35" stroke="#a5b4fc" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="16" y1="35" x2="32" y2="35" stroke="#a5b4fc" stroke-width="1.4" stroke-linecap="round"/>
+
+  <!-- Top row nodes (open) -->
+  <circle cx="16" cy="13" r="4" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/>
+  <circle cx="32" cy="13" r="4" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/>
+
+  <!-- Middle row nodes -->
+  <circle cx="8"  cy="24" r="4.5" fill="#6366f1"/>
+  <circle cx="24" cy="24" r="4.5" fill="#7c3aed"/>
+  <circle cx="40" cy="24" r="4.5" fill="#6366f1"/>
+
+  <!-- Bottom row nodes (open) -->
+  <circle cx="16" cy="35" r="4" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/>
+  <circle cx="32" cy="35" r="4" fill="#312e81" stroke="#a5b4fc" stroke-width="1.5"/>
 </svg>
