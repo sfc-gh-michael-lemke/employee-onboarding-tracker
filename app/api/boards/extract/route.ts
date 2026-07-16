@@ -109,17 +109,13 @@ export async function POST(req: NextRequest) {
     // Truncate to avoid token limits (~12k chars)
     const truncated = text.slice(0, 12000)
 
-    const escaped = truncated.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n")
-
-    const prompt = `${EXTRACT_PROMPT}
-
-Document content:
-${escaped}`
+    // Use $$ dollar-quoting so document content never breaks the SQL string
+    const prompt = `${EXTRACT_PROMPT}\n\nDocument content:\n${truncated.replace(/\$\$/g, "$ $")}`
 
     const [row] = (await querySnowflake(`
       SELECT SNOWFLAKE.CORTEX.COMPLETE(
         'mistral-large2',
-        '${prompt.replace(/'/g, "\\'")}'
+        $$${prompt}$$
       ) AS RESULT
     `)) as Array<{ RESULT: string }>
 
