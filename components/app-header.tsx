@@ -89,12 +89,25 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background text-foreground">
       <div className="w-full px-4 h-14 flex items-center gap-4">
-        {LOGO_SRC && (
-          <Image src={LOGO_SRC} alt={`${APP_TITLE} logo`} width={28} height={28} className="shrink-0" />
-        )}
-        <span className="text-sm font-semibold tracking-tight shrink-0">{APP_TITLE}</span>
+        <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
+          {LOGO_SRC && (
+            <Image src={LOGO_SRC} alt={`${APP_TITLE} logo`} width={28} height={28} className="shrink-0" />
+          )}
+          <span className="text-sm font-semibold tracking-tight shrink-0">{APP_TITLE}</span>
+        </Link>
 
         <nav className="flex items-center gap-1 ml-4">
+          <Link
+            href="/"
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              pathname === "/"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            Home
+          </Link>
+
           {/* Boards dropdown */}
           <NavDropdown label="Boards" isActive={isBoardActive}>
             <Link
