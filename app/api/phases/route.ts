@@ -7,13 +7,55 @@ export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest) {
   try {
     const boardId = new URL(req.url).searchParams.get("board_id")
-    // null board_id → all; otherwise global (NULL) + board-specific rows
-    const boardFilter = boardId
-      ? `WHERE (BOARD_ID IS NULL OR BOARD_ID = '${boardId.replace(/'/g, "''")}')` : ""
+
+    // ── Board-specific: return ONLY that board's phases from PHASES_CONFIG ──
+    if (boardId) {
+      const rows = (await querySnowflake(`
+        SELECT PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN
+        FROM TEMP.MLEMKE.PHASES_CONFIG
+        WHERE BOARD_ID = '${boardId.replace(/'/g, "''")}'
+          AND COALESCE(IS_HIDDEN, FALSE) = FALSE
+        ORDER BY PHASE_KEY, ITEM_KEY NULLS FIRST
+      `)) as Array<{
+        PHASE_KEY: string; ITEM_KEY: string | null
+        LABEL: string | null; DESCRIPTION: string | null
+        VERIFIED_TEST_QUERY: string | null; IS_HIDDEN: boolean | null
+      }>
+
+      // Build phase map from raw rows
+      const phaseMap: Record<string, { key: string; label: string; description: string; items: unknown[]; links: [] }> = {}
+      for (const row of rows) {
+        if (!row.ITEM_KEY) {
+          // Phase-level row
+          if (!phaseMap[row.PHASE_KEY]) {
+            phaseMap[row.PHASE_KEY] = { key: row.PHASE_KEY, label: row.LABEL || row.PHASE_KEY, description: row.DESCRIPTION || "", items: [], links: [] }
+          } else {
+            phaseMap[row.PHASE_KEY].label = row.LABEL || row.PHASE_KEY
+            phaseMap[row.PHASE_KEY].description = row.DESCRIPTION || ""
+          }
+        } else {
+          // Task-level row
+          if (!phaseMap[row.PHASE_KEY]) {
+            phaseMap[row.PHASE_KEY] = { key: row.PHASE_KEY, label: row.PHASE_KEY, description: "", items: [], links: [] }
+          }
+          phaseMap[row.PHASE_KEY].items.push({
+            key: row.ITEM_KEY,
+            label: row.LABEL || row.ITEM_KEY,
+            description: row.DESCRIPTION || "",
+            verifiedTestQuery: row.VERIFIED_TEST_QUERY || null,
+            hidden: false,
+            links: [],
+          })
+        }
+      }
+      return Response.json(Object.values(phaseMap))
+    }
+
+    // ── Global: static phases merged with PHASES_CONFIG (BOARD_ID IS NULL) ──
     const overrides = (await querySnowflake(`
       SELECT PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN, BOARD_ID
       FROM TEMP.MLEMKE.PHASES_CONFIG
-      ${boardFilter}
+      WHERE BOARD_ID IS NULL
     `)) as Array<{
       PHASE_KEY: string
       ITEM_KEY: string | null
