@@ -9,7 +9,6 @@ dist/
 Future of RevOps/
 .snowflake/
 pyproject.toml
-service-spec.yaml
 streamlit_checks.py
 __pycache__/
 *.py

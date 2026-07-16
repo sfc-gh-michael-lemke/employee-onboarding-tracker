@@ -8,7 +8,8 @@ export async function GET() {
   try {
     const employees = await querySnowflake(`
       SELECT ID, FULL_NAME, TITLE, TO_VARCHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE, 
-             MANAGER, TERRITORY, NOTES, EMAIL, CREATED_AT
+             MANAGER, TERRITORY, NOTES, EMAIL, CREATED_AT,
+             COALESCE(CUSTOM_DATA, PARSE_JSON('{}')) AS CUSTOM_DATA
       FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES
       ORDER BY CREATED_AT DESC
     `)

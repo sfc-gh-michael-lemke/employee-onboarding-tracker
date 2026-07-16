@@ -49,6 +49,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if ("territory"  in body) profileFields["TERRITORY"]  = sql(body.territory)
     if ("notes"      in body) profileFields["NOTES"]      = sql(body.notes)
 
+    if ("custom_data" in body && typeof body.custom_data === "object") {
+      profileFields["CUSTOM_DATA"] = `PARSE_JSON('${JSON.stringify(body.custom_data).replace(/'/g, "''")}')`
+    }
+
     if (Object.keys(profileFields).length > 0) {
       const sets = Object.entries(profileFields).map(([col, val]) => `${col} = ${val}`).join(", ")
       await querySnowflake(`

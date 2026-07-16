@@ -1,0 +1,23 @@
+spec:
+  containers:
+  - name: revops-onboarding
+    image: /temp/mlemke/revops_repo/revops-onboarding:latest
+    env:
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      NODE_ENV: production
+      SNOWFLAKE_SDK_DISABLE_OCSP: "true"
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 1000m
+    readinessProbe:
+      port: 3000
+      path: /
+  endpoints:
+  - name: app
+    port: 3000
+    public: true
