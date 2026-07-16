@@ -258,7 +258,7 @@ export default function AdminPage() {
           >
             <span className="text-base leading-none">⊞</span> Columns
           </button>
-          <a href="/admin" className="text-sm text-blue-600 hover:underline">← Admin</a>
+
         </div>
       </div>
 
