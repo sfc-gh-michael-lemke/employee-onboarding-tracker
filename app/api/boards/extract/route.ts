@@ -1,8 +1,18 @@
 import { querySnowflake } from "@/lib/snowflake"
 import type { NextRequest } from "next/server"
 
+// pdf-parse uses DOMMatrix internally which doesn't exist in Node.js
+if (typeof globalThis.DOMMatrix === "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).DOMMatrix = class DOMMatrix {
+    constructor(_init?: string | number[]) {}
+    static fromMatrix() { return new (globalThis as any).DOMMatrix() }
+    static fromFloat32Array() { return new (globalThis as any).DOMMatrix() }
+    static fromFloat64Array() { return new (globalThis as any).DOMMatrix() }
+  }
+}
+
 export const dynamic = "force-dynamic"
-// Allow large file uploads (up to 20MB)
 export const config = { api: { bodyParser: false } }
 
 const EXTRACT_PROMPT = `You are a data extraction assistant. Given the text content of a business document, extract:
