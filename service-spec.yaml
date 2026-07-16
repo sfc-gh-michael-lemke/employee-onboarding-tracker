@@ -7,6 +7,7 @@ spec:
       PORT: "3000"
       NODE_ENV: production
       SNOWFLAKE_SDK_DISABLE_OCSP: "true"
+      SNOWFLAKE_WAREHOUSE: "SNOWHOUSE"
     resources:
       requests:
         memory: 512Mi
