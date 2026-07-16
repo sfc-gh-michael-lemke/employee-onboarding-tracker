@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trash2 } from "lucide-react"
+import { Trash2, AlertTriangle, X } from "lucide-react"
 
 interface Board {
   ID: string
@@ -12,24 +12,95 @@ interface Board {
   EMPLOYEE_COUNT: number
 }
 
+function DeleteModal({
+  board,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  board: Board
+  onConfirm: () => void
+  onCancel: () => void
+  loading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+
+      {/* Dialog */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-100">
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="flex items-start gap-4 mb-5">
+          <div className="shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle size={18} className="text-red-500" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Delete &ldquo;{board.NAME}&rdquo;?</h2>
+            <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+              This will permanently delete the board
+              {board.EMPLOYEE_COUNT > 0
+                ? `, ${board.EMPLOYEE_COUNT} employee${board.EMPLOYEE_COUNT !== 1 ? "s" : ""}, their checklists,`
+                : ""}{" "}
+              and all phase configuration. This cannot be undone.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60 flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <span className="inline-block w-3.5 h-3.5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                Deleting…
+              </>
+            ) : (
+              <>
+                <Trash2 size={13} />
+                Delete board
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function BoardsGrid({ initialBoards }: { initialBoards: Board[] }) {
   const [boards, setBoards] = useState(initialBoards)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmBoard, setConfirmBoard] = useState<Board | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const handleDelete = async (e: React.MouseEvent, board: Board) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!confirm(`Delete "${board.NAME}"?\n\nThis will permanently remove the board, all ${board.EMPLOYEE_COUNT} employee${board.EMPLOYEE_COUNT !== 1 ? "s" : ""}, their checklists, and all phase configuration. This cannot be undone.`)) return
-
-    setDeleting(board.ID)
+  const handleDeleteConfirm = async () => {
+    if (!confirmBoard) return
+    setDeleting(true)
     try {
-      const res = await fetch(`/api/boards/${board.ID}`, { method: "DELETE" })
+      const res = await fetch(`/api/boards/${confirmBoard.ID}`, { method: "DELETE" })
       if (!res.ok) throw new Error((await res.json()).error)
-      setBoards((prev) => prev.filter((b) => b.ID !== board.ID))
+      setBoards((prev) => prev.filter((b) => b.ID !== confirmBoard.ID))
+      setConfirmBoard(null)
     } catch (err) {
       alert(`Failed to delete board: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
-      setDeleting(null)
+      setDeleting(false)
     }
   }
 
@@ -45,14 +116,13 @@ export function BoardsGrid({ initialBoards }: { initialBoards: Board[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {boards.map((board) => {
-        const isDeleting = deleting === board.ID
-        return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {boards.map((board) => (
           <div key={board.ID} className="relative group">
             <Link
               href={`/boards/${board.ID}`}
-              className={`block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all ${isDeleting ? "opacity-40 pointer-events-none" : ""}`}
+              className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
             >
               <div className="flex items-start justify-between mb-2 pr-6">
                 <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
@@ -71,22 +141,26 @@ export function BoardsGrid({ initialBoards }: { initialBoards: Board[] }) {
               </span>
             </Link>
 
-            {/* Delete button — shown on hover, positioned top-right */}
+            {/* Delete button */}
             <button
-              onClick={(e) => handleDelete(e, board)}
-              disabled={isDeleting}
+              onClick={(e) => { e.preventDefault(); setConfirmBoard(board) }}
               title="Delete board"
-              className="absolute top-3 right-3 p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40 z-10"
+              className="absolute top-3 right-3 p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10"
             >
-              {isDeleting ? (
-                <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
+              <Trash2 size={14} />
             </button>
           </div>
-        )
-      })}
-    </div>
+        ))}
+      </div>
+
+      {confirmBoard && (
+        <DeleteModal
+          board={confirmBoard}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => !deleting && setConfirmBoard(null)}
+          loading={deleting}
+        />
+      )}
+    </>
   )
 }
