@@ -36,6 +36,7 @@ docker build --platform linux/amd64 -t "$IMAGE" .
 # ── 4. Login + Push to Snowflake registry ────────────────────────────────────
 echo ""
 echo "=== Logging in to registry ==="
+docker logout "$REGISTRY" 2>/dev/null || true
 snow spcs image-registry login
 
 echo ""
