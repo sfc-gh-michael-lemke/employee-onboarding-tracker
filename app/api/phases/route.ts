@@ -4,11 +4,16 @@ import type { NextRequest } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const boardId = new URL(req.url).searchParams.get("board_id")
+    // null board_id → all; otherwise global (NULL) + board-specific rows
+    const boardFilter = boardId
+      ? `WHERE (BOARD_ID IS NULL OR BOARD_ID = '${boardId.replace(/'/g, "''")}')` : ""
     const overrides = (await querySnowflake(`
-      SELECT PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN
+      SELECT PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN, BOARD_ID
       FROM TEMP.MLEMKE.PHASES_CONFIG
+      ${boardFilter}
     `)) as Array<{
       PHASE_KEY: string
       ITEM_KEY: string | null
@@ -16,6 +21,7 @@ export async function GET() {
       DESCRIPTION: string | null
       VERIFIED_TEST_QUERY: string | null
       IS_HIDDEN: boolean | null
+      BOARD_ID: string | null
     }>
 
     const phaseOverrides: Record<string, { label?: string; description?: string }> = {}
@@ -117,7 +123,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { phase_key, item_key, label, description, verified_test_query, hidden } = await req.json()
+    const { phase_key, item_key, label, description, verified_test_query, hidden, board_id } = await req.json()
     if (!phase_key) return Response.json({ error: "phase_key required" }, { status: 400 })
 
     const pk  = esc(phase_key)
@@ -126,20 +132,23 @@ export async function PATCH(req: NextRequest) {
     const dsc = description           !== undefined ? (description           ? `'${esc(description)}'`           : "NULL") : "NULL"
     const vtq = verified_test_query   !== undefined ? (verified_test_query   ? `'${esc(verified_test_query)}'`   : "NULL") : "NULL"
     const hid = hidden                !== undefined ? (hidden ? "TRUE" : "FALSE")                                          : "FALSE"
+    const bid = board_id              !== undefined ? (board_id              ? `'${esc(board_id)}'`              : "NULL") : "NULL"
 
     await querySnowflake(`
       MERGE INTO TEMP.MLEMKE.PHASES_CONFIG AS tgt
-      USING (SELECT '${pk}' AS PHASE_KEY, ${ik} AS ITEM_KEY) AS src
+      USING (SELECT '${pk}' AS PHASE_KEY, ${ik} AS ITEM_KEY, ${bid} AS BOARD_ID) AS src
         ON tgt.PHASE_KEY = src.PHASE_KEY
        AND (tgt.ITEM_KEY = src.ITEM_KEY OR (tgt.ITEM_KEY IS NULL AND src.ITEM_KEY IS NULL))
+       AND (tgt.BOARD_ID = src.BOARD_ID OR (tgt.BOARD_ID IS NULL AND src.BOARD_ID IS NULL))
       WHEN MATCHED THEN UPDATE SET
         LABEL               = ${lbl},
         DESCRIPTION         = ${dsc},
         VERIFIED_TEST_QUERY = ${vtq},
         IS_HIDDEN           = ${hid},
+        BOARD_ID            = ${bid},
         UPDATED_AT          = CURRENT_TIMESTAMP()
-      WHEN NOT MATCHED THEN INSERT (PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN)
-        VALUES ('${pk}', ${ik}, ${lbl}, ${dsc}, ${vtq}, ${hid})
+      WHEN NOT MATCHED THEN INSERT (PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION, VERIFIED_TEST_QUERY, IS_HIDDEN, BOARD_ID)
+        VALUES ('${pk}', ${ik}, ${lbl}, ${dsc}, ${vtq}, ${hid}, ${bid})
     `)
 
     return Response.json({ ok: true })

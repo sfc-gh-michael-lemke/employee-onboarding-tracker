@@ -180,12 +180,15 @@ export default function PhasesPage() {
   const [userId, setUserId]         = useState("")
   const [runTrigger, setRunTrigger] = useState(0)
   const [runningAll, setRunningAll] = useState(false)
-  // per-item query results keyed by "phaseKey/itemKey"
   const [results, setResults]       = useState<Record<string, QueryResult | null>>({})
+
+  // Board selector
+  const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string }>>([])
+  const [boardId, setBoardId]     = useState<string>("__global__")
 
   // Add phase / add task dialogs
   const [addPhaseOpen, setAddPhaseOpen]   = useState(false)
-  const [addTaskOpen, setAddTaskOpen]     = useState<string | null>(null)  // phaseKey or null
+  const [addTaskOpen, setAddTaskOpen]     = useState<string | null>(null)
   const [addForm, setAddForm]             = useState({ label: "", description: "", key: "" })
   const [addSaving, setAddSaving]         = useState(false)
   const [addError, setAddError]           = useState<string | null>(null)
@@ -193,6 +196,28 @@ export default function PhasesPage() {
   function slugify(s: string) {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40)
   }
+
+  // Load boards once
+  useEffect(() => {
+    fetch("/api/boards")
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setBoards(data) })
+      .catch(() => {})
+  }, [])
+
+  // Load phases whenever boardId changes
+  useEffect(() => {
+    setLoading(true)
+    const url = boardId === "__global__" ? "/api/phases" : `/api/phases?board_id=${boardId}`
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error(data?.error ?? JSON.stringify(data))
+        setPhases(data)
+        setLoading(false)
+      })
+      .catch(e  => { setError(e.message); setLoading(false) })
+  }, [boardId])
 
   async function handleAddPhase() {
     if (!addForm.label.trim()) return
@@ -202,7 +227,7 @@ export default function PhasesPage() {
       const res = await fetch("/api/phases", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase_key: key, item_key: null, label: addForm.label, description: addForm.description }),
+        body: JSON.stringify({ phase_key: key, item_key: null, label: addForm.label, description: addForm.description, board_id: boardId === "__global__" ? null : boardId }),
       })
       if (!res.ok) throw new Error(await res.text())
       setPhases(prev => [...prev, { key, label: addForm.label, description: addForm.description, items: [], links: [] }])
@@ -219,7 +244,7 @@ export default function PhasesPage() {
       const res = await fetch("/api/phases", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase_key: phaseKey, item_key: key, label: addForm.label, description: addForm.description }),
+        body: JSON.stringify({ phase_key: phaseKey, item_key: key, label: addForm.label, description: addForm.description, board_id: boardId === "__global__" ? null : boardId }),
       })
       if (!res.ok) throw new Error(await res.text())
       setPhases(prev => prev.map(p =>
@@ -233,16 +258,7 @@ export default function PhasesPage() {
     finally { setAddSaving(false) }
   }
 
-  useEffect(() => {
-    fetch("/api/phases")
-      .then(r => r.json())
-      .then(data => {
-        if (!Array.isArray(data)) throw new Error(data?.error ?? JSON.stringify(data))
-        setPhases(data)
-        setLoading(false)
-      })
-      .catch(e  => { setError(e.message); setLoading(false) })
-  }, [])
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading…</div>
 
   async function saveField(
     phaseKey: string, itemKey: string | null,
@@ -251,7 +267,7 @@ export default function PhasesPage() {
     const res = await fetch("/api/phases", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, [field]: value }),
+      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, [field]: value, board_id: boardId === "__global__" ? null : boardId }),
     })
     if (!res.ok) throw new Error(await res.text())
     const stateKey = field === "verified_test_query" ? "verifiedTestQuery" : field
@@ -267,7 +283,7 @@ export default function PhasesPage() {
     const res = await fetch("/api/phases", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, hidden: true }),
+      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, hidden: true, board_id: boardId === "__global__" ? null : boardId }),
     })
     if (!res.ok) { alert("Delete failed"); return }
     setPhases(prev => prev.map(p =>
@@ -292,6 +308,17 @@ export default function PhasesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Board selector */}
+          <select
+            value={boardId}
+            onChange={e => setBoardId(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="__global__">Global phases</option>
+            {boards.map(b => (
+              <option key={b.ID} value={b.ID}>{b.NAME}</option>
+            ))}
+          </select>
           <button
             onClick={() => { setAddForm({ label: "", description: "", key: "" }); setAddError(null); setAddPhaseOpen(true) }}
             className="px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
