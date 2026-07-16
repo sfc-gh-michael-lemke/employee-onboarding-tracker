@@ -13,10 +13,19 @@ interface ExtractedEmployee {
   include: boolean
 }
 
+interface ExtractedTask {
+  key: string
+  label: string
+  description: string
+  verifiedTestQuery: string | null
+  include: boolean
+}
+
 interface ExtractedPhase {
   key: string
   label: string
   description: string
+  tasks: ExtractedTask[]
   include: boolean
 }
 
@@ -62,7 +71,13 @@ export default function NewBoardPage() {
           (e: Omit<ExtractedEmployee, "include">) => ({ ...e, include: true })
         ),
         phases: (Array.isArray(data.phases) ? data.phases : []).map(
-          (p: Omit<ExtractedPhase, "include">) => ({ ...p, include: true })
+          (p: Omit<ExtractedPhase, "include">) => ({
+            ...p,
+            include: true,
+            tasks: (Array.isArray(p.tasks) ? p.tasks : []).map(
+              (t: Omit<ExtractedTask, "include">) => ({ ...t, include: true })
+            ),
+          })
         ),
       }
       setResult(extracted)
@@ -119,6 +134,16 @@ export default function NewBoardPage() {
     setResult(r => r ? { ...r, phases: r.phases.map((p, idx) => idx === i ? { ...p, include: !p.include } : p) } : r)
   }
 
+  function toggleTask(phaseIdx: number, taskIdx: number) {
+    setResult(r => r ? {
+      ...r,
+      phases: r.phases.map((p, i) => i !== phaseIdx ? p : {
+        ...p,
+        tasks: p.tasks.map((t, j) => j !== taskIdx ? t : { ...t, include: !t.include })
+      })
+    } : r)
+  }
+
   function updateEmployee(i: number, field: keyof ExtractedEmployee, val: string) {
     setResult(r => r ? { ...r, employees: r.employees.map((e, idx) => idx === i ? { ...e, [field]: val } : e) } : r)
   }
@@ -152,15 +177,28 @@ export default function NewBoardPage() {
         }))
       await Promise.all(empPromises)
 
-      // 3. Add extracted phases to PHASES_CONFIG
-      const phasePromises = result.phases
-        .filter(p => p.include && p.key && p.label)
-        .map(p => fetch("/api/phases", {
+      // 3. Add extracted phases AND tasks to PHASES_CONFIG tagged to this board
+      for (const p of result.phases.filter(p => p.include && p.key && p.label)) {
+        // Create phase-level row
+        await fetch("/api/phases", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phase_key: p.key, item_key: null, label: p.label, description: p.description }),
-        }))
-      await Promise.all(phasePromises)
+          body: JSON.stringify({ phase_key: p.key, item_key: null, label: p.label, description: p.description, board_id: board.ID }),
+        })
+        // Create each task under this phase
+        for (const t of (p.tasks ?? []).filter(t => t.include && t.key && t.label)) {
+          await fetch("/api/phases", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phase_key: p.key, item_key: t.key,
+              label: t.label, description: t.description,
+              verified_test_query: t.verifiedTestQuery ?? null,
+              board_id: board.ID,
+            }),
+          })
+        }
+      }
 
       router.push(`/boards/${board.ID}`)
     } catch (e) {
@@ -319,26 +357,55 @@ export default function NewBoardPage() {
             )}
           </div>
 
-          {/* Phases preview */}
+          {/* Phases + tasks preview */}
           {result.phases.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-gray-900">
-                  Onboarding phases <span className="text-gray-400 font-normal">({result.phases.filter(p => p.include).length} selected)</span>
+                  Onboarding phases &amp; tasks{" "}
+                  <span className="text-gray-400 font-normal">
+                    ({result.phases.filter(p => p.include).length} phases,{" "}
+                    {result.phases.flatMap(p => p.tasks ?? []).filter(t => t.include).length} tasks)
+                  </span>
                 </h2>
-                <span className="text-xs text-gray-400">Selected phases will be added to the global phase list</span>
+                <span className="text-xs text-gray-400">Tagged to this board</span>
               </div>
-              <div className="space-y-2">
-                {result.phases.map((phase, i) => (
-                  <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    phase.include ? "border-blue-200 bg-blue-50/50" : "border-gray-200 opacity-50"
-                  }`}>
-                    <input type="checkbox" checked={phase.include} onChange={() => togglePhase(i)} className="mt-0.5 rounded" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-800">{phase.label}</div>
-                      {phase.description && <div className="text-xs text-gray-500 mt-0.5">{phase.description}</div>}
-                    </div>
-                  </label>
+              <div className="space-y-3">
+                {result.phases.map((phase, pi) => (
+                  <div key={pi} className={`rounded-lg border transition-colors ${phase.include ? "border-blue-200 bg-blue-50/30" : "border-gray-200 opacity-50"}`}>
+                    {/* Phase header */}
+                    <label className="flex items-start gap-3 p-3 cursor-pointer">
+                      <input type="checkbox" checked={phase.include} onChange={() => togglePhase(pi)} className="mt-0.5 rounded" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-800">{phase.label}</div>
+                        {phase.description && <div className="text-xs text-gray-500 mt-0.5">{phase.description}</div>}
+                      </div>
+                    </label>
+                    {/* Tasks */}
+                    {phase.include && (phase.tasks ?? []).length > 0 && (
+                      <div className="border-t border-blue-100 divide-y divide-blue-50">
+                        {(phase.tasks ?? []).map((task, ti) => (
+                          <div key={ti} className={`px-4 py-2.5 ${task.include ? "" : "opacity-40"}`}>
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input type="checkbox" checked={task.include} onChange={() => toggleTask(pi, ti)} className="mt-0.5 rounded" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-700">{task.label}</div>
+                                {task.description && <div className="text-xs text-gray-400 mt-0.5">{task.description}</div>}
+                                {task.verifiedTestQuery && (
+                                  <details className="mt-1">
+                                    <summary className="text-xs text-blue-500 cursor-pointer hover:text-blue-700">SQL check</summary>
+                                    <pre className="mt-1 text-xs bg-gray-800 text-green-300 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+                                      {task.verifiedTestQuery}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -351,7 +418,7 @@ export default function NewBoardPage() {
               disabled={step === "creating" || !boardName.trim() || result.employees.filter(e => e.include).length === 0}
               className="px-5 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
-              {step === "creating" ? "Creating…" : `Create board with ${result.employees.filter(e => e.include).length} employees`}
+              {step === "creating" ? "Creating…" : `Create board with ${result.employees.filter(e => e.include).length} employees · ${result.phases.filter(p => p.include).length} phases`}
             </button>
             <button
               onClick={() => { setStep("drop"); setResult(null); setPasteText("") }}
