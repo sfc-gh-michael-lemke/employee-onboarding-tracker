@@ -186,6 +186,11 @@ export default function PhasesPage() {
   const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string }>>([])  
   const [boardId, setBoardId]     = useState<string>("")
 
+  // Phase order / visibility (localStorage, keyed per board)
+  const [phaseOrder, setPhaseOrder]     = useState<string[]>([])
+  const [phaseVisible, setPhaseVisible] = useState<Record<string, boolean>>({})
+  const [phaseOrderOpen, setPhaseOrderOpen] = useState(false)
+
   // Add phase / add task dialogs
   const [addPhaseOpen, setAddPhaseOpen]   = useState(false)
   const [addTaskOpen, setAddTaskOpen]     = useState<string | null>(null)
@@ -210,7 +215,7 @@ export default function PhasesPage() {
       .catch(() => {})
   }, [])
 
-  // Load phases whenever boardId changes
+  // Load phases whenever boardId changes; reset order/visibility from localStorage
   useEffect(() => {
     if (!boardId) return
     setLoading(true)
@@ -219,6 +224,16 @@ export default function PhasesPage() {
       .then(data => {
         if (!Array.isArray(data)) throw new Error(data?.error ?? JSON.stringify(data))
         setPhases(data)
+        // Load saved order/visibility for this board
+        try {
+          const savedOrder = JSON.parse(localStorage.getItem(`phases:order:${boardId}`) ?? "null")
+          const savedVis   = JSON.parse(localStorage.getItem(`phases:vis:${boardId}`) ?? "null")
+          setPhaseOrder(Array.isArray(savedOrder) ? savedOrder : data.map((p: Phase) => p.key))
+          setPhaseVisible(savedVis && typeof savedVis === "object" ? savedVis : {})
+        } catch {
+          setPhaseOrder(data.map((p: Phase) => p.key))
+          setPhaseVisible({})
+        }
         setLoading(false)
       })
       .catch(e  => { setError(e.message); setLoading(false) })
@@ -263,6 +278,21 @@ export default function PhasesPage() {
     finally { setAddSaving(false) }
   }
 
+  function persistPhaseOrder(o: string[]) {
+    setPhaseOrder(o)
+    try { localStorage.setItem(`phases:order:${boardId}`, JSON.stringify(o)) } catch {}
+  }
+  function persistPhaseVisible(v: Record<string, boolean>) {
+    setPhaseVisible(v)
+    try { localStorage.setItem(`phases:vis:${boardId}`, JSON.stringify(v)) } catch {}
+  }
+
+  // Ordered + visible phases
+  const fullOrder = [...phaseOrder, ...phases.map(p => p.key).filter(k => !phaseOrder.includes(k))]
+  const orderedPhases = fullOrder
+    .map(k => phases.find(p => p.key === k))
+    .filter((p): p is Phase => !!p && phaseVisible[p.key] !== false)
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading…</div>
 
   async function saveField(
@@ -299,7 +329,7 @@ export default function PhasesPage() {
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading…</div>
   if (error)   return <div className="p-8 text-red-600 text-sm">Error: {error}</div>
 
-  const totalItems = phases.reduce((s, p) => s + p.items.length, 0)
+  const totalItems = orderedPhases.reduce((s, p) => s + p.items.length, 0)
 
   return (
     <main className="px-6 py-8">
@@ -327,6 +357,12 @@ export default function PhasesPage() {
             onClick={() => { setAddForm({ label: "", description: "", key: "" }); setAddError(null); setAddPhaseOpen(true) }}
             className="px-3 py-1.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >+ Add Phase</button>
+          <button
+            onClick={() => setPhaseOrderOpen(true)}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+          >
+            <span className="text-base leading-none">&#8801;</span> Phase Order
+          </button>
           <a href="/admin" className="text-sm text-blue-600 hover:underline">← Admin</a>
         </div>
       </div>
@@ -390,7 +426,7 @@ export default function PhasesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {phases.flatMap((phase, pi) => {
+            {orderedPhases.flatMap((phase, pi) => {
               const itemRows = phase.items.flatMap((item, ii) => {
                 const vtq: string        = (item as any).verifiedTestQuery ?? ""
                 const resultKey          = `${phase.key}/${item.key}`
@@ -593,6 +629,104 @@ export default function PhasesPage() {
           </div>
         </div>
       )}
+      {phaseOrderOpen && (
+        <PhaseOrderPanel
+          phases={phases}
+          phaseOrder={fullOrder}
+          phaseVisible={phaseVisible}
+          onOrderChange={persistPhaseOrder}
+          onVisibleChange={persistPhaseVisible}
+          onClose={() => setPhaseOrderOpen(false)}
+        />
+      )}
     </main>
+  )
+}
+
+// ─── Phase Order Panel ──────────────────────────────────────────────────────
+
+function PhaseOrderPanel({
+  phases, phaseOrder, phaseVisible, onOrderChange, onVisibleChange, onClose,
+}: {
+  phases: Phase[]
+  phaseOrder: string[]
+  phaseVisible: Record<string, boolean>
+  onOrderChange: (o: string[]) => void
+  onVisibleChange: (v: Record<string, boolean>) => void
+  onClose: () => void
+}) {
+  const ordered = phaseOrder
+    .map(k => phases.find(p => p.key === k))
+    .filter((p): p is Phase => !!p)
+  const dragKey = useRef<string | null>(null)
+
+  function toggleVisible(key: string) {
+    onVisibleChange({ ...phaseVisible, [key]: phaseVisible[key] === false ? true : false })
+  }
+
+  function handleDragStart(key: string) { dragKey.current = key }
+  function handleDrop(targetKey: string) {
+    if (!dragKey.current || dragKey.current === targetKey) return
+    const o = [...phaseOrder]
+    const from = o.indexOf(dragKey.current)
+    const to   = o.indexOf(targetKey)
+    if (from === -1 || to === -1) return
+    o.splice(from, 1)
+    o.splice(to, 0, dragKey.current)
+    onOrderChange(o)
+    dragKey.current = null
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-end">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative z-10 h-full w-72 bg-white shadow-xl flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-900">Phase Order</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <p className="text-xs text-gray-400 mb-3">Drag to reorder · click ●/○ to show/hide</p>
+          <ul className="space-y-1">
+            {ordered.map(phase => {
+              const visible = phaseVisible[phase.key] !== false
+              return (
+                <li
+                  key={phase.key}
+                  draggable
+                  onDragStart={() => handleDragStart(phase.key)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => handleDrop(phase.key)}
+                  className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-grab active:cursor-grabbing group"
+                >
+                  <span className="text-gray-300 select-none text-sm">⠿</span>
+                  <button
+                    onClick={() => toggleVisible(phase.key)}
+                    className={`w-7 text-center text-sm font-bold flex-shrink-0 rounded ${visible ? "text-blue-500 hover:text-blue-700" : "text-gray-300 hover:text-gray-500"}`}
+                    title={visible ? "Hide phase" : "Show phase"}
+                  >
+                    {visible ? "●" : "○"}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-medium truncate ${visible ? "text-gray-800" : "text-gray-400"}`}>
+                      {phase.label}
+                    </div>
+                    <div className="text-xs text-gray-400">{phase.items.length} tasks</div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+        <div className="px-5 py-3 border-t border-gray-100">
+          <button
+            onClick={() => { onOrderChange(phases.map(p => p.key)); onVisibleChange({}) }}
+            className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+          >
+            Reset to default
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
