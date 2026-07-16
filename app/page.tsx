@@ -39,19 +39,7 @@ export default async function BoardsHomePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="max-w-xl">
               <div className="flex items-center gap-2.5 mb-3">
-                {/* Mini icon */}
-                <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="48" height="48" rx="10" fill="white" fillOpacity="0.12" />
-                  <line x1="8" y1="24" x2="40" y2="24" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
-                  <line x1="24" y1="8"  x2="24" y2="40" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
-                  <line x1="11" y1="11" x2="37" y2="37" stroke="white" strokeWidth="1.5" strokeOpacity="0.25" />
-                  <line x1="37" y1="11" x2="11" y2="37" stroke="white" strokeWidth="1.5" strokeOpacity="0.25" />
-                  <circle cx="24" cy="8"  r="3.5" fill="white" fillOpacity="0.6" />
-                  <circle cx="24" cy="40" r="3.5" fill="white" fillOpacity="0.6" />
-                  <circle cx="8"  cy="24" r="4.5" fill="#818cf8" />
-                  <circle cx="24" cy="24" r="5"   fill="white" />
-                  <circle cx="40" cy="24" r="4.5" fill="#a78bfa" />
-                </svg>
+                <img src="/icon.svg" width="28" height="28" alt="" className="rounded-lg" />
                 <span className="text-sm font-semibold text-indigo-200 tracking-wide uppercase">RevOps Process Hub</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white mb-3">
