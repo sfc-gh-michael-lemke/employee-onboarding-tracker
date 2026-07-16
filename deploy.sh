@@ -33,12 +33,10 @@ echo ""
 echo "=== Building Docker image ==="
 docker build --platform linux/amd64 -t "$IMAGE" .
 
-# ── 4. Login + Push to Snowflake registry ────────────────────────────────────
-echo ""
-echo "=== Logging in to registry ==="
-docker logout "$REGISTRY" 2>/dev/null || true
-snow spcs image-registry login
-
+# ── 4. Push to Snowflake registry ────────────────────────────────────────────
+# Docker Desktop (signed into Snowflake org) handles token refresh automatically.
+# Running `snow spcs image-registry login` overwrites credentials with a short-
+# lived token that can expire — so we rely on Docker Desktop's integration here.
 echo ""
 echo "=== Pushing to registry ==="
 docker push "$IMAGE"
