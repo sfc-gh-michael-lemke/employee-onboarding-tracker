@@ -1,5 +1,6 @@
 import { querySnowflake } from "@/lib/snowflake"
 import Link from "next/link"
+import { BoardsGrid } from "@/components/boards-grid"
 
 export const revalidate = 30
 
@@ -59,31 +60,7 @@ export default async function BoardsHomePage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {boards.map(board => (
-            <Link
-              key={board.ID}
-              href={`/boards/${board.ID}`}
-              className="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                  {board.NAME}
-                </h2>
-                <span className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
-                  {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
-                </span>
-              </div>
-              {board.DESCRIPTION && (
-                <p className="text-sm text-gray-500 leading-relaxed mb-3">{board.DESCRIPTION}</p>
-              )}
-              <p className="text-xs text-gray-400">Created {board.CREATED_AT}</p>
-              <span className="inline-block mt-3 text-xs font-medium text-blue-600 group-hover:underline">
-                Open board →
-              </span>
-            </Link>
-          ))}
-        </div>
+        <BoardsGrid initialBoards={boards} />
       )}
 
       <div className="mt-12 pt-8 border-t border-gray-100">

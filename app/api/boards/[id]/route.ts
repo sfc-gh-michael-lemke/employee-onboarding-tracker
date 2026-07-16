@@ -21,3 +21,31 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 })
   }
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const safe = id.replace(/'/g, "''")
+
+    // Cascade delete: checklist → employees → phases_config → board
+    await querySnowflake(`
+      DELETE FROM TEMP.MLEMKE.ONBOARDING_CHECKLIST
+      WHERE EMPLOYEE_ID IN (
+        SELECT ID FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES WHERE BOARD_ID = '${safe}'
+      )
+    `)
+    await querySnowflake(`
+      DELETE FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES WHERE BOARD_ID = '${safe}'
+    `)
+    await querySnowflake(`
+      DELETE FROM TEMP.MLEMKE.PHASES_CONFIG WHERE BOARD_ID = '${safe}'
+    `)
+    await querySnowflake(`
+      DELETE FROM TEMP.MLEMKE.ONBOARDING_BOARDS WHERE ID = '${safe}'
+    `)
+
+    return Response.json({ ok: true })
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 })
+  }
+}
