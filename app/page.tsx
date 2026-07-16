@@ -1,7 +1,7 @@
 import { querySnowflake } from "@/lib/snowflake"
 import Link from "next/link"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 30
 
 interface Board {
   ID: string

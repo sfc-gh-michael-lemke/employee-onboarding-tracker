@@ -17,10 +17,15 @@ export async function GET(req: NextRequest) {
       ORDER BY CREATED_AT DESC
     `)
 
-    const checklist = await querySnowflake(`
-      SELECT EMPLOYEE_ID, PHASE_KEY, ITEM_KEY, IS_CHECKED
-      FROM TEMP.MLEMKE.ONBOARDING_CHECKLIST
-    `)
+    const checklist = await querySnowflake(
+      boardId
+        ? `SELECT c.EMPLOYEE_ID, c.PHASE_KEY, c.ITEM_KEY, c.IS_CHECKED
+           FROM TEMP.MLEMKE.ONBOARDING_CHECKLIST c
+           INNER JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.ID = c.EMPLOYEE_ID
+           WHERE e.BOARD_ID = '${boardId.replace(/'/g, "''")}'`
+        : `SELECT EMPLOYEE_ID, PHASE_KEY, ITEM_KEY, IS_CHECKED
+           FROM TEMP.MLEMKE.ONBOARDING_CHECKLIST`
+    )
 
     const checklistMap: Record<string, Record<string, Record<string, boolean>>> = {}
     for (const row of checklist as Array<{ EMPLOYEE_ID: string; PHASE_KEY: string; ITEM_KEY: string; IS_CHECKED: boolean }>) {
@@ -75,10 +80,28 @@ export async function POST(req: NextRequest) {
       LIMIT 1
     `)) as Array<Record<string, string>>
 
-    // Initialize all checklist items
-    const checklistValues = PHASES.flatMap((phase) =>
-      phase.items.map((item) => `(${sql(newEmp.ID)}, '${phase.key}', '${item.key}', FALSE)`)
-    ).join(", ")
+    // Initialize checklist items from board-specific phases, falling back to static PHASES
+    let checklistValues: string
+    if (boardId) {
+      const boardPhases = (await querySnowflake(`
+        SELECT PHASE_KEY, ITEM_KEY FROM TEMP.MLEMKE.PHASES_CONFIG
+        WHERE BOARD_ID = '${(boardId as string).replace(/'/g, "''")}' AND ITEM_KEY != '' AND COALESCE(IS_HIDDEN, FALSE) = FALSE
+      `)) as Array<{ PHASE_KEY: string; ITEM_KEY: string }>
+
+      if (boardPhases.length > 0) {
+        checklistValues = boardPhases
+          .map((row) => `(${sql(newEmp.ID)}, '${row.PHASE_KEY.replace(/'/g, "''")}', '${row.ITEM_KEY.replace(/'/g, "''")}', FALSE)`)
+          .join(", ")
+      } else {
+        checklistValues = PHASES.flatMap((phase) =>
+          phase.items.map((item) => `(${sql(newEmp.ID)}, '${phase.key}', '${item.key}', FALSE)`)
+        ).join(", ")
+      }
+    } else {
+      checklistValues = PHASES.flatMap((phase) =>
+        phase.items.map((item) => `(${sql(newEmp.ID)}, '${phase.key}', '${item.key}', FALSE)`)
+      ).join(", ")
+    }
 
     await querySnowflake(`
       INSERT INTO TEMP.MLEMKE.ONBOARDING_CHECKLIST (EMPLOYEE_ID, PHASE_KEY, ITEM_KEY, IS_CHECKED)

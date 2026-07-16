@@ -9,6 +9,10 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 interface Board { ID: string; NAME: string }
 
+let boardsCache: Board[] = []
+let boardsCacheAt = 0
+const BOARDS_TTL = 30_000
+
 const ADMIN_LINKS = [
   { href: "/admin/employees", label: "Employees", description: "Add, edit, manage employee records" },
   { href: "/admin/phases",    label: "Phases",    description: "Configure onboarding phases and tasks" },
@@ -63,11 +67,21 @@ export function AppHeader() {
   const [boards, setBoards] = useState<Board[]>([])
 
   useEffect(() => {
+    if (Date.now() - boardsCacheAt < BOARDS_TTL) {
+      setBoards(boardsCache)
+      return
+    }
     fetch("/api/boards")
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setBoards(data) })
+      .then(data => {
+        if (Array.isArray(data)) {
+          boardsCache = data
+          boardsCacheAt = Date.now()
+          setBoards(data)
+        }
+      })
       .catch(() => {})
-  }, [pathname]) // refresh board list when nav changes
+  }, []) // cache hit avoids re-fetching on every nav
 
   const isBoardActive = pathname === "/" || pathname.startsWith("/boards")
   const isAdminActive = pathname.startsWith("/admin")
