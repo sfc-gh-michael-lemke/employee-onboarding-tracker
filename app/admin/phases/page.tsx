@@ -182,9 +182,9 @@ export default function PhasesPage() {
   const [runningAll, setRunningAll] = useState(false)
   const [results, setResults]       = useState<Record<string, QueryResult | null>>({})
 
-  // Board selector
-  const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string }>>([])
-  const [boardId, setBoardId]     = useState<string>("__global__")
+  // Board selector — default to first board once loaded
+  const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string }>>([])  
+  const [boardId, setBoardId]     = useState<string>("")
 
   // Add phase / add task dialogs
   const [addPhaseOpen, setAddPhaseOpen]   = useState(false)
@@ -197,19 +197,24 @@ export default function PhasesPage() {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40)
   }
 
-  // Load boards once
+  // Load boards once, auto-select first
   useEffect(() => {
     fetch("/api/boards")
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setBoards(data) })
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setBoards(data)
+          setBoardId(prev => prev || data[0].ID)
+        }
+      })
       .catch(() => {})
   }, [])
 
   // Load phases whenever boardId changes
   useEffect(() => {
+    if (!boardId) return
     setLoading(true)
-    const url = boardId === "__global__" ? "/api/phases" : `/api/phases?board_id=${boardId}`
-    fetch(url)
+    fetch(`/api/phases?board_id=${boardId}`)
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) throw new Error(data?.error ?? JSON.stringify(data))
@@ -227,7 +232,7 @@ export default function PhasesPage() {
       const res = await fetch("/api/phases", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase_key: key, item_key: null, label: addForm.label, description: addForm.description, board_id: boardId === "__global__" ? null : boardId }),
+        body: JSON.stringify({ phase_key: key, item_key: null, label: addForm.label, description: addForm.description, board_id: boardId }),
       })
       if (!res.ok) throw new Error(await res.text())
       setPhases(prev => [...prev, { key, label: addForm.label, description: addForm.description, items: [], links: [] }])
@@ -244,7 +249,7 @@ export default function PhasesPage() {
       const res = await fetch("/api/phases", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase_key: phaseKey, item_key: key, label: addForm.label, description: addForm.description, board_id: boardId === "__global__" ? null : boardId }),
+        body: JSON.stringify({ phase_key: phaseKey, item_key: key, label: addForm.label, description: addForm.description, board_id: boardId }),
       })
       if (!res.ok) throw new Error(await res.text())
       setPhases(prev => prev.map(p =>
@@ -267,7 +272,7 @@ export default function PhasesPage() {
     const res = await fetch("/api/phases", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, [field]: value, board_id: boardId === "__global__" ? null : boardId }),
+      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, [field]: value, board_id: boardId }),
     })
     if (!res.ok) throw new Error(await res.text())
     const stateKey = field === "verified_test_query" ? "verifiedTestQuery" : field
@@ -283,7 +288,7 @@ export default function PhasesPage() {
     const res = await fetch("/api/phases", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, hidden: true, board_id: boardId === "__global__" ? null : boardId }),
+      body: JSON.stringify({ phase_key: phaseKey, item_key: itemKey, hidden: true, board_id: boardId }),
     })
     if (!res.ok) { alert("Delete failed"); return }
     setPhases(prev => prev.map(p =>
@@ -314,7 +319,6 @@ export default function PhasesPage() {
             onChange={e => setBoardId(e.target.value)}
             className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
-            <option value="__global__">Global phases</option>
             {boards.map(b => (
               <option key={b.ID} value={b.ID}>{b.NAME}</option>
             ))}

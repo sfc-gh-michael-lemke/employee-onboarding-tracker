@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       // Build phase map from raw rows
       const phaseMap: Record<string, { key: string; label: string; description: string; items: unknown[]; links: [] }> = {}
       for (const row of rows) {
+        // '' is the phase-level sentinel (ITEM_KEY is NOT NULL in the table)
         if (!row.ITEM_KEY) {
           // Phase-level row
           if (!phaseMap[row.PHASE_KEY]) {
@@ -169,7 +170,8 @@ export async function PATCH(req: NextRequest) {
     if (!phase_key) return Response.json({ error: "phase_key required" }, { status: 400 })
 
     const pk  = esc(phase_key)
-    const ik  = item_key              !== undefined ? (item_key              ? `'${esc(item_key)}'`              : "NULL") : "NULL"
+    // ITEM_KEY is NOT NULL — use '' as the phase-level sentinel
+    const ik  = item_key ? `'${esc(item_key)}'` : "''"
     const lbl = label                 !== undefined ? (label                 ? `'${esc(label)}'`                 : "NULL") : "NULL"
     const dsc = description           !== undefined ? (description           ? `'${esc(description)}'`           : "NULL") : "NULL"
     const vtq = verified_test_query   !== undefined ? (verified_test_query   ? `'${esc(verified_test_query)}'`   : "NULL") : "NULL"
@@ -180,7 +182,7 @@ export async function PATCH(req: NextRequest) {
       MERGE INTO TEMP.MLEMKE.PHASES_CONFIG AS tgt
       USING (SELECT '${pk}' AS PHASE_KEY, ${ik} AS ITEM_KEY, ${bid} AS BOARD_ID) AS src
         ON tgt.PHASE_KEY = src.PHASE_KEY
-       AND (tgt.ITEM_KEY = src.ITEM_KEY OR (tgt.ITEM_KEY IS NULL AND src.ITEM_KEY IS NULL))
+       AND tgt.ITEM_KEY  = src.ITEM_KEY
        AND (tgt.BOARD_ID = src.BOARD_ID OR (tgt.BOARD_ID IS NULL AND src.BOARD_ID IS NULL))
       WHEN MATCHED THEN UPDATE SET
         LABEL               = ${lbl},
