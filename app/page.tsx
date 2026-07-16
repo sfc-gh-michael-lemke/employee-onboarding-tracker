@@ -63,15 +63,7 @@ export default async function BoardsHomePage() {
               </p>
             </div>
 
-            <div className="shrink-0">
-              <Link
-                href="/boards/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-900 font-semibold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg text-sm"
-              >
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1v13M1 7.5h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                New Board
-              </Link>
-            </div>
+
           </div>
 
           {/* Feature chips */}
