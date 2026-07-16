@@ -163,8 +163,8 @@ async function runLongRunningOnConnection(
 // --- Connection pool configuration ---
 
 const POOL_CONFIG = {
-  min: 0, // Start with no connections (lazy init)
-  max: 10, // Scale up to 10 concurrent connections
+  min: 1, // Keep one warm connection ready
+  max: 10,
 }
 
 // Owner's rights: single pool, recreated when the service token rotates.
