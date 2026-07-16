@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
+import { AddEmployeeDialog } from "@/components/add-employee-dialog"
 
 interface Employee {
   ID: string
@@ -57,6 +58,11 @@ export default function AdminPage() {
   const [saved, setSaved]         = useState<string | null>(null)
   const [error, setError]         = useState<string | null>(null)
   const [deleting, setDeleting]   = useState<string | null>(null)
+  const [showAdd, setShowAdd]     = useState(false)
+
+  // Board selector
+  const [boards, setBoards]   = useState<Array<{ ID: string; NAME: string }>>([])
+  const [boardId, setBoardId] = useState<string>("")
 
   // Column config — all lazily read from localStorage
   const [colOrder, setColOrder]       = useState<string[]>([])
@@ -75,15 +81,29 @@ export default function AdminPage() {
     setCustomCols(storedCustom)
   }, [])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (bid?: string) => {
     setLoading(true)
-    const res = await fetch("/api/employees")
+    const url = bid ? `/api/employees?board_id=${bid}` : "/api/employees"
+    const res = await fetch(url)
     const data = await res.json()
     setEmployees(data)
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Load boards on mount, auto-select first
+  useEffect(() => {
+    fetch("/api/boards")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setBoards(data)
+          setBoardId(data[0].ID)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => { if (boardId) load(boardId) }, [boardId, load])
 
   // Computed ordered + visible columns
   const allCols: ColDef[] = [
@@ -186,6 +206,21 @@ export default function AdminPage() {
     return (emp[col.key as keyof Employee] as string | null) ?? ""
   }
 
+  async function handleAddEmployee(data: {
+    fullName: string; title: string; startDate: string
+    manager: string; territory: string; notes: string
+  }) {
+    const res = await fetch("/api/employees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, boardId }),
+    })
+    if (!res.ok) throw new Error((await res.json()).error)
+    const newEmp = await res.json()
+    setEmployees(prev => [newEmp, ...prev])
+    setShowAdd(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
@@ -202,6 +237,21 @@ export default function AdminPage() {
           <p className="text-sm text-gray-500 mt-0.5">{employees.length} employees · click a row to edit</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Board selector */}
+          <select
+            value={boardId}
+            onChange={e => setBoardId(e.target.value)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            {boards.map(b => <option key={b.ID} value={b.ID}>{b.NAME}</option>)}
+          </select>
+          <button
+            onClick={() => setShowAdd(true)}
+            disabled={!boardId}
+            className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+          >
+            + Add Employee
+          </button>
           <button
             onClick={() => setColMgrOpen(true)}
             className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
@@ -333,6 +383,13 @@ export default function AdminPage() {
           onVisibleChange={persistColVisible}
           onCustomColsChange={persistCustomCols}
           onClose={() => setColMgrOpen(false)}
+        />
+      )}
+
+      {showAdd && (
+        <AddEmployeeDialog
+          onClose={() => setShowAdd(false)}
+          onSubmit={handleAddEmployee}
         />
       )}
     </main>
