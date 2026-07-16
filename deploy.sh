@@ -33,7 +33,11 @@ echo ""
 echo "=== Building Docker image ==="
 docker build --platform linux/amd64 -t "$IMAGE" .
 
-# ── 4. Push to Snowflake registry ─────────────────────────────────────────────
+# ── 4. Login + Push to Snowflake registry ────────────────────────────────────
+echo ""
+echo "=== Logging in to registry ==="
+snow spcs image-registry login
+
 echo ""
 echo "=== Pushing to registry ==="
 docker push "$IMAGE"
