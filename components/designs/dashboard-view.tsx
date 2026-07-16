@@ -3,27 +3,26 @@
 import { useState } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
-import { PHASES, TOTAL_ITEMS } from "@/lib/phases"
 import { EmployeeDrawer } from "@/components/employee-drawer"
 import { UserPlus, ChevronUp, ChevronDown, CheckCircle2, Clock, Users, TrendingUp, Award } from "lucide-react"
 
 type SortKey = "FULL_NAME" | "START_DATE" | "currentPhase" | "checkedCount"
 
-const PHASE_ORDER = Object.fromEntries([...PHASES.map((p, i) => [p.key, i]), ["done", PHASES.length]])
-const PHASE_LABELS = Object.fromEntries(PHASES.map((p) => [p.key, p.label]))
-PHASE_LABELS["done"] = "Done"
-
-export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick }: ViewProps) {
+export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>("START_DATE")
   const [sortAsc, setSortAsc] = useState(true)
+
+  const PHASE_ORDER = Object.fromEntries([...phases.map((p, i) => [p.key, i]), ["done", phases.length]])
+  const PHASE_LABELS: Record<string, string> = Object.fromEntries([...phases.map((p) => [p.key, p.label]), ["done", "Done"]])
+  const TOTAL_ITEMS = phases.reduce((sum, p) => sum + p.items.length, 0)
 
   const drawerEmp = employees.find((e) => e.ID === drawerId) ?? null
 
   const inProgress = employees.filter((e) => e.currentPhase !== "done").length
   const done = employees.filter((e) => e.currentPhase === "done").length
   const avgPct =
-    employees.length > 0
+    employees.length > 0 && TOTAL_ITEMS > 0
       ? Math.round(employees.reduce((s, e) => s + (e.checkedCount / TOTAL_ITEMS) * 100, 0) / employees.length)
       : 0
 
@@ -85,12 +84,12 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground text-sm">
-                  No employees yet. Click "Add New Hire" to get started.
+                  No employees yet. Click &quot;Add New Hire&quot; to get started.
                 </td>
               </tr>
             ) : (
               sorted.map((emp) => {
-                const pct = Math.round((emp.checkedCount / TOTAL_ITEMS) * 100)
+                const pct = TOTAL_ITEMS > 0 ? Math.round((emp.checkedCount / TOTAL_ITEMS) * 100) : 0
                 const isDone = emp.currentPhase === "done"
                 return (
                   <tr
@@ -141,6 +140,8 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
           onToggleCheck={onToggleCheck}
           onDelete={(id) => { onDelete(id); setDrawerId(null) }}
           onSaveNotes={onSaveNotes}
+          phases={phases}
+          boardId={boardId}
         />
       )}
     </div>

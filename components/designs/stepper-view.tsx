@@ -3,31 +3,32 @@
 import { useState, useEffect } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
-import { PHASES, TOTAL_ITEMS } from "@/lib/phases"
 import { PhaseSection } from "@/components/phase-section"
-import { CheckCircle2, Circle, Clock, UserPlus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
+import { EmployeeDrawer } from "@/components/employee-drawer"
+import { CheckCircle2, UserPlus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 
-const PHASE_LABELS = Object.fromEntries(PHASES.map((p) => [p.key, p.label]))
-PHASE_LABELS["done"] = "Done"
-
-export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick }: ViewProps) {
+export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
   const [focusedPhaseIdx, setFocusedPhaseIdx] = useState(0)
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
+  const [drawerId, setDrawerId] = useState<string | null>(null)
+
+  const PHASE_LABELS: Record<string, string> = Object.fromEntries([...phases.map((p) => [p.key, p.label]), ["done", "Done"]])
+  const TOTAL_ITEMS = phases.reduce((sum, p) => sum + p.items.length, 0)
 
   const selected = employees.find((e) => e.ID === selectedId) ?? null
-  const activeIdx = selected ? PHASES.findIndex((p) => p.key === selected.currentPhase) : 0
-  const effectiveIdx = selected?.currentPhase === "done" ? PHASES.length - 1 : activeIdx
+  const drawerEmp = employees.find((e) => e.ID === drawerId) ?? null
+  const activeIdx = selected ? phases.findIndex((p) => p.key === selected.currentPhase) : 0
+  const effectiveIdx = selected?.currentPhase === "done" ? phases.length - 1 : activeIdx
 
-  // Reset focused phase when employee changes
   useEffect(() => {
     setFocusedPhaseIdx(effectiveIdx >= 0 ? effectiveIdx : 0)
     setNotes(selected?.NOTES ?? "")
   }, [selectedId])
 
-  const focusedPhase = PHASES[focusedPhaseIdx]
+  const focusedPhase = phases[focusedPhaseIdx]
   const checkedCount = selected?.checkedCount ?? 0
-  const pct = Math.round((checkedCount / TOTAL_ITEMS) * 100)
+  const pct = TOTAL_ITEMS > 0 ? Math.round((checkedCount / TOTAL_ITEMS) * 100) : 0
 
   const handleSaveNotes = async () => {
     if (!selected) return
@@ -54,7 +55,7 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
           ) : (
             employees.map((emp) => {
               const isDone = emp.currentPhase === "done"
-              const empPct = Math.round((emp.checkedCount / TOTAL_ITEMS) * 100)
+              const empPct = TOTAL_ITEMS > 0 ? Math.round((emp.checkedCount / TOTAL_ITEMS) * 100) : 0
               return (
                 <button
                   key={emp.ID}
@@ -112,9 +113,9 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
             {/* Step indicator */}
             <div className="mb-6">
               <div className="flex items-center gap-1 overflow-x-auto pb-2">
-                {PHASES.map((phase, idx) => {
+                {phases.map((phase, idx) => {
                   const phaseChecklist = selected.checklist[phase.key] ?? {}
-                  const isDone = phase.items.every((i) => phaseChecklist[i.key])
+                  const isDone = phase.items.length > 0 && phase.items.every((i) => phaseChecklist[i.key])
                   const isActive = selected.currentPhase === phase.key
                   const isFocused = focusedPhaseIdx === idx
 
@@ -141,8 +142,12 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
                           {phase.label.replace(" ", "\n")}
                         </span>
                       </button>
-                      {idx < PHASES.length - 1 && (
-                        <div className={`w-4 h-0.5 ${PHASES.slice(0, idx + 1).every((p) => p.items.every((i) => (selected.checklist[p.key] ?? {})[i.key])) ? "bg-emerald-400" : "bg-border"}`} />
+                      {idx < phases.length - 1 && (
+                        <div className={`w-4 h-0.5 ${
+                          phases.slice(0, idx + 1).every((p) => p.items.every((i) => (selected.checklist[p.key] ?? {})[i.key]))
+                            ? "bg-emerald-400"
+                            : "bg-border"
+                        }`} />
                       )}
                     </div>
                   )
@@ -175,10 +180,10 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
                     >
                       <ChevronLeft size={15} />
                     </button>
-                    <span className="text-xs text-muted-foreground px-1">{focusedPhaseIdx + 1}/{PHASES.length}</span>
+                    <span className="text-xs text-muted-foreground px-1">{focusedPhaseIdx + 1}/{phases.length}</span>
                     <button
-                      onClick={() => setFocusedPhaseIdx((i) => Math.min(PHASES.length - 1, i + 1))}
-                      disabled={focusedPhaseIdx === PHASES.length - 1}
+                      onClick={() => setFocusedPhaseIdx((i) => Math.min(phases.length - 1, i + 1))}
+                      disabled={focusedPhaseIdx === phases.length - 1}
                       className="p-1 rounded hover:bg-muted/60 disabled:opacity-30 transition-colors"
                     >
                       <ChevronRight size={15} />
@@ -233,25 +238,6 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
                                 {item.description}
                               </span>
                             )}
-                            {item.links && item.links.length > 0 && (
-                              <span className="flex flex-wrap gap-1.5 mt-1.5">
-                                {item.links.map((link) => {
-                                  const isSnowflake = link.type === "snowflake"
-                                  const isPlaceholder = link.url.startsWith("#")
-                                  if (isSnowflake) return (
-                                    <span key={link.url} className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
-                                      🗄 {link.label.split(".").slice(-2).join(".")}
-                                    </span>
-                                  )
-                                  if (isPlaceholder) return null
-                                  return (
-                                    <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border transition-colors">
-                                      ↗ {link.label}
-                                    </a>
-                                  )
-                                })}
-                              </span>
-                            )}
                           </span>
                         </label>
                       </li>
@@ -268,7 +254,7 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                placeholder="Add notes about this employee's onboarding…"
+                placeholder="Add notes about this employee&apos;s onboarding…"
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <button
@@ -282,6 +268,18 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
           </div>
         )}
       </main>
+
+      {drawerId && (
+        <EmployeeDrawer
+          employee={drawerEmp}
+          onClose={() => setDrawerId(null)}
+          onToggleCheck={onToggleCheck}
+          onDelete={(id) => { onDelete(id); setDrawerId(null) }}
+          onSaveNotes={onSaveNotes}
+          phases={phases}
+          boardId={boardId}
+        />
+      )}
     </div>
   )
 }

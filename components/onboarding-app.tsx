@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import type { Employee } from "@/app/page"
-import { getCurrentPhase } from "@/lib/phases"
+import type { Phase } from "@/lib/phases"
+import { PHASES } from "@/lib/phases"
 import { AddEmployeeDialog } from "@/components/add-employee-dialog"
 import { KanbanView } from "@/components/designs/kanban-view"
 import { DashboardView } from "@/components/designs/dashboard-view"
@@ -19,6 +20,8 @@ export interface ViewProps {
   onDelete: (id: string) => void
   onSaveNotes: (id: string, notes: string) => Promise<void>
   onAddClick: () => void
+  phases: Phase[]
+  boardId?: string
 }
 
 const DESIGNS: { key: Design; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
@@ -32,12 +35,16 @@ export function OnboardingApp({
   initialError,
   boardId,
   boardName,
+  boardPhases,
 }: {
   initialEmployees: Employee[]
   initialError: string | null
   boardId?: string
   boardName?: string
+  boardPhases?: Phase[]
 }) {
+  const phases = boardPhases ?? PHASES
+
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployees[0]?.ID ?? null)
   const [showAdd, setShowAdd] = useState(false)
@@ -53,7 +60,7 @@ export function OnboardingApp({
         setEmployees(data)
       }
     } catch { /* silent */ }
-  }, [])
+  }, [boardId])
 
   useEffect(() => {
     const id = setInterval(refresh, 15_000)
@@ -72,7 +79,13 @@ export function OnboardingApp({
           (sum, phase) => sum + Object.values(phase).filter(Boolean).length,
           0
         )
-        return { ...emp, checklist: newChecklist, checkedCount, currentPhase: getCurrentPhase(newChecklist) }
+        // Compute currentPhase from dynamic phases
+        let currentPhase = "done"
+        for (const phase of phases) {
+          const allChecked = phase.items.every((item) => newChecklist[phase.key]?.[item.key] === true)
+          if (!allChecked) { currentPhase = phase.key; break }
+        }
+        return { ...emp, checklist: newChecklist, checkedCount, currentPhase }
       })
     )
     fetch(`/api/employees/${empId}`, {
@@ -128,6 +141,8 @@ export function OnboardingApp({
     onDelete: handleDelete,
     onSaveNotes: handleSaveNotes,
     onAddClick: () => setShowAdd(true),
+    phases,
+    boardId,
   }
 
   if (initialError) {

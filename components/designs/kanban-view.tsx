@@ -3,21 +3,22 @@
 import { useState, useRef } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
-import { PHASES, TOTAL_ITEMS } from "@/lib/phases"
 import { EmployeeDrawer } from "@/components/employee-drawer"
 import { CheckCircle2, Clock, UserPlus, GripVertical } from "lucide-react"
+import type { Phase } from "@/lib/phases"
 
-const PHASE_LABELS = Object.fromEntries(PHASES.map((p) => [p.key, p.label]))
-const ALL_COLUMNS = [...PHASES.map((p) => p.key), "done"]
-const COL_LABEL: Record<string, string> = { ...PHASE_LABELS, done: "Done ✓" }
-const PHASE_INDEX = Object.fromEntries(PHASES.map((p, i) => [p.key, i]))
-
-export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick }: ViewProps) {
+export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
   const [drawerId, setDrawerId]     = useState<string | null>(null)
-  const [dragOver, setDragOver]     = useState<string | null>(null)   // column key being hovered
-  const [dragging, setDragging]     = useState<string | null>(null)   // employee ID being dragged
-  const [advancing, setAdvancing]   = useState<string | null>(null)   // employee ID being processed
+  const [dragOver, setDragOver]     = useState<string | null>(null)
+  const [dragging, setDragging]     = useState<string | null>(null)
+  const [advancing, setAdvancing]   = useState<string | null>(null)
   const dragEmpRef = useRef<string | null>(null)
+
+  const PHASE_LABELS = Object.fromEntries(phases.map((p) => [p.key, p.label]))
+  const ALL_COLUMNS = [...phases.map((p) => p.key), "done"]
+  const COL_LABEL: Record<string, string> = { ...PHASE_LABELS, done: "Done ✓" }
+  const PHASE_INDEX = Object.fromEntries(phases.map((p, i) => [p.key, i]))
+  const TOTAL_ITEMS = phases.reduce((sum, p) => sum + p.items.length, 0)
 
   const byPhase: Record<string, Employee[]> = {}
   for (const col of ALL_COLUMNS) byPhase[col] = []
@@ -28,8 +29,6 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
 
   const drawerEmp = employees.find((e) => e.ID === drawerId) ?? null
 
-  // When dropped on a target column, check all items in every phase UP TO (not including) the target.
-  // This moves the employee to the start of the target phase with all prior phases completed.
   async function handleDrop(targetPhaseKey: string) {
     const empId = dragEmpRef.current
     if (!empId) return
@@ -39,22 +38,19 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
     const emp = employees.find((e) => e.ID === empId)
     if (!emp) return
 
-    const targetIdx = targetPhaseKey === "done" ? PHASES.length : (PHASE_INDEX[targetPhaseKey] ?? 0)
-    const currentIdx = emp.currentPhase === "done" ? PHASES.length : (PHASE_INDEX[emp.currentPhase] ?? 0)
+    const targetIdx = targetPhaseKey === "done" ? phases.length : (PHASE_INDEX[targetPhaseKey] ?? 0)
+    const currentIdx = emp.currentPhase === "done" ? phases.length : (PHASE_INDEX[emp.currentPhase] ?? 0)
 
-    // Only allow forward movement
     if (targetIdx <= currentIdx) return
 
     setAdvancing(empId)
 
-    // Check all items in phases before the target
-    const phasesToCheck = PHASES.slice(0, targetIdx)
+    const phasesToCheck = phases.slice(0, targetIdx)
     for (const phase of phasesToCheck) {
       for (const item of phase.items) {
         const alreadyChecked = emp.checklist[phase.key]?.[item.key]
         if (!alreadyChecked) {
           onToggleCheck(empId, phase.key, item.key, true)
-          // Small stagger to avoid overwhelming the server
           await new Promise((r) => setTimeout(r, 30))
         }
       }
@@ -91,12 +87,11 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
             const isDoneCol = colKey === "done"
             const isTarget  = dragOver === colKey
 
-            // Determine if dropping here would be a valid forward move
             const dragEmp = employees.find((e) => e.ID === dragging)
             const dragIdx = dragEmp
-              ? (dragEmp.currentPhase === "done" ? PHASES.length : (PHASE_INDEX[dragEmp.currentPhase] ?? 0))
+              ? (dragEmp.currentPhase === "done" ? phases.length : (PHASE_INDEX[dragEmp.currentPhase] ?? 0))
               : -1
-            const colIdx = colKey === "done" ? PHASES.length : (PHASE_INDEX[colKey] ?? 0)
+            const colIdx = colKey === "done" ? phases.length : (PHASE_INDEX[colKey] ?? 0)
             const isValidTarget = dragging !== null && colIdx > dragIdx
 
             return (
@@ -130,7 +125,6 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
                   </span>
                 </div>
 
-                {/* Drop zone indicator */}
                 {isTarget && isValidTarget && (
                   <div className="mx-1 mb-1 border-2 border-dashed border-primary/40 rounded-lg bg-primary/5 flex items-center justify-center py-2 text-[10px] text-primary font-medium">
                     Drop to advance here
@@ -138,7 +132,7 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
                 )}
                 {isTarget && !isValidTarget && dragging && (
                   <div className="mx-1 mb-1 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/5 flex items-center justify-center py-2 text-[10px] text-destructive font-medium">
-                    Can't move backward
+                    Can&apos;t move backward
                   </div>
                 )}
 
@@ -156,6 +150,9 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
                         isSelected={emp.ID === selectedId}
                         isAdvancing={advancing === emp.ID}
                         isDragging={dragging === emp.ID}
+                        phases={phases}
+                        totalItems={TOTAL_ITEMS}
+                        colLabel={COL_LABEL}
                         onClick={() => { onSelect(emp.ID); setDrawerId(emp.ID) }}
                         onDragStart={() => {
                           setDragging(emp.ID)
@@ -183,6 +180,8 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
           onToggleCheck={onToggleCheck}
           onDelete={(id) => { onDelete(id); setDrawerId(null) }}
           onSaveNotes={onSaveNotes}
+          phases={phases}
+          boardId={boardId}
         />
       )}
     </div>
@@ -194,16 +193,19 @@ interface CardProps {
   isSelected: boolean
   isAdvancing: boolean
   isDragging: boolean
+  phases: Phase[]
+  totalItems: number
+  colLabel: Record<string, string>
   onClick: () => void
   onDragStart: () => void
   onDragEnd: () => void
 }
 
-function EmployeeCard({ employee, isSelected, isAdvancing, isDragging, onClick, onDragStart, onDragEnd }: CardProps) {
-  const phase        = PHASES.find((p) => p.key === employee.currentPhase)
+function EmployeeCard({ employee, isSelected, isAdvancing, isDragging, phases, totalItems, colLabel, onClick, onDragStart, onDragEnd }: CardProps) {
+  const phase        = phases.find((p) => p.key === employee.currentPhase)
   const phaseItems   = phase?.items.length ?? 0
   const checkedInPhase = phase ? Object.values(employee.checklist[phase.key] ?? {}).filter(Boolean).length : 0
-  const pct          = TOTAL_ITEMS > 0 ? Math.round((employee.checkedCount / TOTAL_ITEMS) * 100) : 0
+  const pct          = totalItems > 0 ? Math.round((employee.checkedCount / totalItems) * 100) : 0
   const isDone       = employee.currentPhase === "done"
 
   return (
@@ -221,17 +223,13 @@ function EmployeeCard({ employee, isSelected, isAdvancing, isDragging, onClick, 
           : "border-border hover:border-primary/30 hover:shadow-md"
       } ${!isDone ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
-      {/* Drag handle */}
       {!isDone && (
         <div className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-30 transition-opacity">
           <GripVertical size={12} className="text-muted-foreground" />
         </div>
       )}
 
-      <button
-        onClick={onClick}
-        className="w-full text-left px-3 py-3"
-      >
+      <button onClick={onClick} className="w-full text-left px-3 py-3">
         {isAdvancing && (
           <div className="text-[10px] text-primary font-medium mb-1.5 flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-primary animate-bounce" />
@@ -251,7 +249,7 @@ function EmployeeCard({ employee, isSelected, isAdvancing, isDragging, onClick, 
 
         {!isDone && phase && (
           <div className="text-[10px] text-muted-foreground mb-2 pl-2">
-            {COL_LABEL[employee.currentPhase]}: {checkedInPhase}/{phaseItems}
+            {colLabel[employee.currentPhase]}: {checkedInPhase}/{phaseItems}
           </div>
         )}
 

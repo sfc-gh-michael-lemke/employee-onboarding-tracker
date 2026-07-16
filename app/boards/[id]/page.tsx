@@ -1,5 +1,6 @@
 import { querySnowflake } from "@/lib/snowflake"
 import { PHASES } from "@/lib/phases"
+import type { Phase } from "@/lib/phases"
 import { OnboardingApp } from "@/components/onboarding-app"
 import { notFound } from "next/navigation"
 import type { Employee } from "@/app/page"
@@ -8,18 +9,9 @@ export const dynamic = "force-dynamic"
 
 function getCurrentPhase(
   checklist: Record<string, Record<string, boolean>>,
-  phaseKeys: string[]
+  phases: Phase[]
 ): string {
-  if (phaseKeys.length > 0) {
-    for (const phaseKey of phaseKeys) {
-      const phaseItems = checklist[phaseKey] ?? {}
-      const allChecked = Object.keys(phaseItems).length > 0 && Object.values(phaseItems).every(Boolean)
-      if (!allChecked) return phaseKey
-    }
-    return "done"
-  }
-  // fallback: use static PHASES ordering
-  for (const phase of PHASES) {
+  for (const phase of phases) {
     const allChecked = phase.items.every((item) => checklist[phase.key]?.[item.key] === true)
     if (!allChecked) return phase.key
   }
@@ -31,6 +23,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
   let employees: Employee[] = []
   let error: string | null = null
   let boardName = ""
+  let boardPhases: Phase[] = []
 
   try {
     const [board] = (await querySnowflake(`
@@ -42,7 +35,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
 
     const safeId = id.replace(/'/g, "''")
 
-    const [empRows, checklistRows, boardPhaseRows] = await Promise.all([
+    const [empRows, checklistRows, phaseConfigRows] = await Promise.all([
       querySnowflake(`
         SELECT ID, FULL_NAME, TITLE, TO_VARCHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE,
                MANAGER, TERRITORY, NOTES, EMAIL, CREATED_AT
@@ -57,14 +50,49 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         WHERE e.BOARD_ID = '${safeId}'
       `) as Promise<Array<{ EMPLOYEE_ID: string; PHASE_KEY: string; ITEM_KEY: string; IS_CHECKED: boolean }>>,
       querySnowflake(`
-        SELECT DISTINCT PHASE_KEY
+        SELECT PHASE_KEY, ITEM_KEY, LABEL, DESCRIPTION
         FROM TEMP.MLEMKE.PHASES_CONFIG
         WHERE BOARD_ID = '${safeId}'
-        ORDER BY PHASE_KEY
-      `) as Promise<Array<{ PHASE_KEY: string }>>,
+          AND COALESCE(IS_HIDDEN, FALSE) = FALSE
+        ORDER BY PHASE_KEY, ITEM_KEY
+      `) as Promise<Array<{ PHASE_KEY: string; ITEM_KEY: string; LABEL: string; DESCRIPTION: string }>>,
     ])
 
-    const boardPhaseKeys = boardPhaseRows.map((r) => r.PHASE_KEY)
+    // Build Phase[] from PHASES_CONFIG rows
+    const phaseMap: Record<string, Phase> = {}
+    for (const row of phaseConfigRows) {
+      if (row.ITEM_KEY === "" || row.ITEM_KEY === null) {
+        // Phase-level row
+        if (!phaseMap[row.PHASE_KEY]) {
+          phaseMap[row.PHASE_KEY] = {
+            key: row.PHASE_KEY,
+            label: row.LABEL ?? row.PHASE_KEY,
+            description: row.DESCRIPTION ?? "",
+            items: [],
+          }
+          boardPhases.push(phaseMap[row.PHASE_KEY])
+        }
+      } else {
+        // Item-level row — ensure phase exists
+        if (!phaseMap[row.PHASE_KEY]) {
+          phaseMap[row.PHASE_KEY] = {
+            key: row.PHASE_KEY,
+            label: row.PHASE_KEY,
+            description: "",
+            items: [],
+          }
+          boardPhases.push(phaseMap[row.PHASE_KEY])
+        }
+        phaseMap[row.PHASE_KEY].items.push({
+          key: row.ITEM_KEY,
+          label: row.LABEL ?? row.ITEM_KEY,
+          description: row.DESCRIPTION ?? "",
+        })
+      }
+    }
+
+    // Fall back to static phases if none found in DB
+    const effectivePhases = boardPhases.length > 0 ? boardPhases : PHASES
 
     const checklistMap: Record<string, Record<string, Record<string, boolean>>> = {}
     for (const row of checklistRows) {
@@ -79,11 +107,19 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         (sum, phase) => sum + Object.values(phase).filter(Boolean).length,
         0
       )
-      return { ...emp, checklist: empChecklist, checkedCount, currentPhase: getCurrentPhase(empChecklist, boardPhaseKeys) } as Employee
+      return { ...emp, checklist: empChecklist, checkedCount, currentPhase: getCurrentPhase(empChecklist, effectivePhases) } as Employee
     })
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load data"
   }
 
-  return <OnboardingApp initialEmployees={employees} initialError={error} boardId={id} boardName={boardName} />
+  return (
+    <OnboardingApp
+      initialEmployees={employees}
+      initialError={error}
+      boardId={id}
+      boardName={boardName}
+      boardPhases={boardPhases.length > 0 ? boardPhases : undefined}
+    />
+  )
 }

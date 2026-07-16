@@ -3,27 +3,31 @@
 import { useState, useEffect, useCallback } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
-import { PHASES, TOTAL_ITEMS } from "@/lib/phases"
+import type { Phase } from "@/lib/phases"
+import { PHASES } from "@/lib/phases"
 import { PhaseSection } from "@/components/phase-section"
 import { X, Trash2, CheckCircle2, FlaskConical } from "lucide-react"
 
 interface DrawerProps extends Pick<ViewProps, "onToggleCheck" | "onDelete" | "onSaveNotes"> {
   employee: Employee | null
   onClose: () => void
+  phases?: Phase[]
+  boardId?: string
 }
 
 type TestStatus = "idle" | "running" | "pass" | "fail" | "no_employee"
 
-const PHASE_LABELS: Record<string, string> = Object.fromEntries(PHASES.map((p) => [p.key, p.label]))
-PHASE_LABELS["done"] = "Done"
+export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onSaveNotes, phases: boardPhases, boardId }: DrawerProps) {
+  const phases = boardPhases ?? PHASES
+  const TOTAL_ITEMS = phases.reduce((sum, p) => sum + p.items.length, 0)
+  const PHASE_LABELS: Record<string, string> = Object.fromEntries([...phases.map((p) => [p.key, p.label]), ["done", "Done"]])
 
-export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onSaveNotes }: DrawerProps) {
   const [notes, setNotes]           = useState(employee?.NOTES ?? "")
   const [saving, setSaving]         = useState(false)
   const [empEmail, setEmpEmail]     = useState(employee?.EMAIL ?? "")
   const [editingEmail, setEditingEmail] = useState(false)
   const [savingEmail, setSavingEmail]   = useState(false)
-  const [queries, setQueries]       = useState<Record<string, string>>({})  // "phaseKey/itemKey" → sql
+  const [queries, setQueries]       = useState<Record<string, string>>({})
   const [testStatus, setTestStatus] = useState<Record<string, TestStatus>>({})
   const [testingAll, setTestingAll] = useState(false)
 
@@ -32,13 +36,14 @@ export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onS
     setEmpEmail(employee?.EMAIL ?? "")
   }, [employee?.ID, employee?.NOTES])
 
-  // Load verified queries from /api/phases once
+  // Load verified queries from /api/phases (board-scoped if boardId present)
   useEffect(() => {
-    fetch("/api/phases")
+    const url = boardId ? `/api/phases?board_id=${boardId}` : "/api/phases"
+    fetch(url)
       .then(r => r.json())
-      .then((phases: any[]) => {
+      .then((phaseList: any[]) => {
         const map: Record<string, string> = {}
-        for (const phase of phases) {
+        for (const phase of phaseList) {
           for (const item of phase.items) {
             if (item.verifiedTestQuery) map[`${phase.key}/${item.key}`] = item.verifiedTestQuery
           }
@@ -46,7 +51,7 @@ export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onS
         setQueries(map)
       })
       .catch(() => {})
-  }, [])
+  }, [boardId])
 
   const saveEmail = useCallback(async (newEmail: string) => {
     if (!employee) return
@@ -107,22 +112,21 @@ export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onS
     setTestingAll(true)
     setTestStatus({})
     const pairs: [string, string][] = []
-    for (const phase of PHASES) {
+    for (const phase of phases) {
       for (const item of phase.items) {
         if (queries[`${phase.key}/${item.key}`]) pairs.push([phase.key, item.key])
       }
     }
-    // Run in parallel batches of 4
     for (let i = 0; i < pairs.length; i += 4) {
       await Promise.all(pairs.slice(i, i + 4).map(([pk, ik]) => testItem(pk, ik)))
     }
     setTestingAll(false)
-  }, [queries, testItem])
+  }, [queries, testItem, phases])
 
   if (!employee) return null
 
   const checkedCount = employee.checkedCount
-  const progressPct  = Math.round((checkedCount / TOTAL_ITEMS) * 100)
+  const progressPct  = TOTAL_ITEMS > 0 ? Math.round((checkedCount / TOTAL_ITEMS) * 100) : 0
   const hasQueries   = Object.keys(queries).length > 0
 
   return (
@@ -186,12 +190,12 @@ export function EmployeeDrawer({ employee, onClose, onToggleCheck, onDelete, onS
           </div>
 
           <div className="space-y-2">
-            {PHASES.map((phase, idx) => {
+            {phases.map((phase, idx) => {
               const phaseChecklist = employee.checklist[phase.key] ?? {}
               const checked  = phase.items.filter((i) => phaseChecklist[i.key]).length
               const isActive = employee.currentPhase === phase.key
-              const isDone   = checked === phase.items.length
-              const isLocked = !isDone && !isActive && idx > PHASES.findIndex((p) => p.key === employee.currentPhase)
+              const isDone   = checked === phase.items.length && phase.items.length > 0
+              const isLocked = !isDone && !isActive && idx > phases.findIndex((p) => p.key === employee.currentPhase)
               return (
                 <PhaseSection
                   key={phase.key}
