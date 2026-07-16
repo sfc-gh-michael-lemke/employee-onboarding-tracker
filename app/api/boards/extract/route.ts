@@ -42,9 +42,11 @@ async function extractText(file: File): Promise<string> {
   }
 
   if (type === "application/pdf" || file.name.endsWith(".pdf")) {
-    const pdfParse = await import("pdf-parse")
-    const parseFn = (pdfParse as unknown as { default: (buf: Buffer) => Promise<{ text: string }> }).default ?? pdfParse
-    const result = await parseFn(buffer)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require("pdf-parse")
+    const fn: (buf: Buffer) => Promise<{ text: string }> =
+      typeof pdfParse === "function" ? pdfParse : pdfParse.default
+    const result = await fn(buffer)
     return result.text
   }
 
@@ -52,9 +54,10 @@ async function extractText(file: File): Promise<string> {
     type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     file.name.endsWith(".docx")
   ) {
-    const mammoth = await import("mammoth")
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mammoth = require("mammoth")
     const result = await mammoth.extractRawText({ buffer })
-    return result.value
+    return result.value as string
   }
 
   if (
@@ -63,9 +66,10 @@ async function extractText(file: File): Promise<string> {
     file.name.endsWith(".xlsx") ||
     file.name.endsWith(".xls")
   ) {
-    const XLSX = await import("xlsx")
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const XLSX = require("xlsx")
     const wb = XLSX.read(buffer, { type: "buffer" })
-    return wb.SheetNames.map(name => {
+    return (wb.SheetNames as string[]).map((name: string) => {
       const ws = wb.Sheets[name]
       return XLSX.utils.sheet_to_csv(ws)
     }).join("\n\n")
