@@ -66,18 +66,44 @@ export default async function BoardsHomePage() {
 
           </div>
 
-          {/* Feature chips */}
-          <div className="flex flex-wrap gap-2 mt-8">
-            {[
-              { icon: "✦", label: "AI extracts phases from any doc" },
-              { icon: "◎", label: "Live progress per person" },
-              { icon: "⬡", label: "Snowflake-verified milestones" },
-            ].map(chip => (
-              <span key={chip.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm text-indigo-100">
-                <span className="text-indigo-300">{chip.icon}</span>
-                {chip.label}
-              </span>
-            ))}
+          {/* Feature columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
+            <div className="rounded-2xl bg-white/8 border border-white/15 px-5 py-5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/30 flex items-center justify-center mb-3">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+                  <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-white mb-1">AI extracts phases from any doc</div>
+              <p className="text-xs text-indigo-300 leading-relaxed">
+                Drop a PDF, Word doc, or spreadsheet and AI pulls out phases, tasks, and employees automatically. No manual setup.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white/8 border border-white/15 px-5 py-5">
+              <div className="w-9 h-9 rounded-xl bg-violet-500/30 flex items-center justify-center mb-3">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-white mb-1">Live progress per person</div>
+              <p className="text-xs text-indigo-300 leading-relaxed">
+                Every checklist update reflects instantly across board, kanban, and dashboard views. See who's on track and who needs attention.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white/8 border border-white/15 px-5 py-5">
+              <div className="w-9 h-9 rounded-xl bg-fuchsia-500/30 flex items-center justify-center mb-3">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e879f9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
+              </div>
+              <div className="text-sm font-semibold text-white mb-1">Snowflake-verified milestones</div>
+              <p className="text-xs text-indigo-300 leading-relaxed">
+                Tasks can be backed by live SQL checks against your Snowflake data, so completion is confirmed by data, not just a checkbox.
+              </p>
+            </div>
           </div>
         </div>
       </div>
