@@ -2,7 +2,7 @@ import { querySnowflake } from "@/lib/snowflake"
 import Link from "next/link"
 import { BoardsGrid } from "@/components/boards-grid"
 
-export const revalidate = 30
+export const dynamic = "force-dynamic"
 
 interface Board {
   ID: string
