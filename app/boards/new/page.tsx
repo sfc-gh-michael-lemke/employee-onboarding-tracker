@@ -202,27 +202,18 @@ export default function NewBoardPage() {
         }))
       await Promise.all(empPromises)
 
-      // 3. Add extracted phases AND tasks to PHASES_CONFIG tagged to this board
-      for (const p of result.phases.filter(p => p.include && p.key && p.label)) {
-        // Create phase-level row
-        await fetch("/api/phases", {
-          method: "PATCH",
+      // 3. Bulk-insert all selected phases + tasks in one request
+      const selectedPhases = result.phases
+        .filter(p => p.include && p.key && p.label)
+        .map(p => ({ ...p, tasks: (p.tasks ?? []).filter(t => t.include && t.key && t.label) }))
+
+      if (selectedPhases.length > 0) {
+        const phaseRes = await fetch(`/api/boards/${board.ID}/phases`, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phase_key: p.key, item_key: null, label: p.label, description: p.description, board_id: board.ID }),
+          body: JSON.stringify({ phases: selectedPhases }),
         })
-        // Create each task under this phase
-        for (const t of (p.tasks ?? []).filter(t => t.include && t.key && t.label)) {
-          await fetch("/api/phases", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phase_key: p.key, item_key: t.key,
-              label: t.label, description: t.description,
-              verified_test_query: t.verifiedTestQuery ?? null,
-              board_id: board.ID,
-            }),
-          })
-        }
+        if (!phaseRes.ok) throw new Error((await phaseRes.json()).error ?? "Phase save failed")
       }
 
       router.push(`/boards/${board.ID}`)
