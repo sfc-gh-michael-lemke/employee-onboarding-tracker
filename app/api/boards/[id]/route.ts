@@ -27,24 +27,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const safe = id.replace(/'/g, "''")
 
-    // Checklist and phases_config are independent — run in parallel first
-    await Promise.all([
-      querySnowflake(`
-        DELETE FROM TEMP.MLEMKE.ONBOARDING_CHECKLIST
-        WHERE EMPLOYEE_ID IN (
-          SELECT ID FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES WHERE BOARD_ID = '${safe}'
-        )
-      `),
-      querySnowflake(`
-        DELETE FROM TEMP.MLEMKE.PHASES_CONFIG WHERE BOARD_ID = '${safe}'
-      `),
-    ])
-    await querySnowflake(`
-      DELETE FROM TEMP.MLEMKE.ONBOARDING_EMPLOYEES WHERE BOARD_ID = '${safe}'
-    `)
-    await querySnowflake(`
-      DELETE FROM TEMP.MLEMKE.ONBOARDING_BOARDS WHERE ID = '${safe}'
-    `)
+    // Single stored procedure call — all 4 cascade deletes run server-side
+    await querySnowflake(`CALL TEMP.MLEMKE.DELETE_BOARD('${safe}')`)
 
     return Response.json({ ok: true })
   } catch (e) {
