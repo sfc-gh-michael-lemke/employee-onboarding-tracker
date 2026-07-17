@@ -336,7 +336,7 @@ export default function PhasesPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 mb-0.5">Onboarding Phases &amp; Tasks</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-0.5">{boards.find(b => b.ID === boardId)?.NAME ?? "Phases & Tasks"}</h1>
           <p className="text-sm text-gray-400">
             {phases.length} phases · {totalItems} tasks ·{" "}
             <span className="text-blue-500">click any cell to edit</span>
