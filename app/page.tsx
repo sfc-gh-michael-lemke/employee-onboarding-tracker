@@ -9,7 +9,6 @@ export default function HomePage() {
           <div className="max-w-xl">
             <div className="flex items-center gap-2.5 mb-3">
               <img src="/icon.svg" width="28" height="28" alt="" className="rounded-lg" />
-              <span className="text-sm font-semibold text-indigo-200 tracking-wide uppercase">RevOps Process Hub</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-white mb-3">
               Turn any process doc into a<br className="hidden sm:block" /> live, trackable program.
