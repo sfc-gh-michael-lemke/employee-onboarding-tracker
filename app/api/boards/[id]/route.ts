@@ -8,15 +8,32 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params
     const [board] = (await querySnowflake(`
       SELECT b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT,
+             COALESCE(b.IS_ARCHIVED, FALSE) AS IS_ARCHIVED,
              COUNT(e.ID) AS EMPLOYEE_COUNT
       FROM TEMP.MLEMKE.ONBOARDING_BOARDS b
       LEFT JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.BOARD_ID = b.ID
       WHERE b.ID = '${id.replace(/'/g, "''")}'
-      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT
+      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED
     `)) as Array<Record<string, string>>
 
     if (!board) return Response.json({ error: "Not found" }, { status: 404 })
     return Response.json(board)
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const safe = id.replace(/'/g, "''")
+    const { archived } = await req.json()
+    await querySnowflake(`
+      UPDATE TEMP.MLEMKE.ONBOARDING_BOARDS
+      SET IS_ARCHIVED = ${archived ? "TRUE" : "FALSE"}
+      WHERE ID = '${safe}'
+    `)
+    return Response.json({ ok: true })
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 })
   }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trash2, AlertTriangle, X } from "lucide-react"
+import { Trash2, AlertTriangle, X, Archive, ArchiveRestore } from "lucide-react"
 
 interface Board {
   ID: string
@@ -10,6 +10,7 @@ interface Board {
   DESCRIPTION: string | null
   CREATED_AT: string
   EMPLOYEE_COUNT: number
+  IS_ARCHIVED?: boolean
 }
 
 function DeleteModal({
@@ -84,10 +85,19 @@ function DeleteModal({
   )
 }
 
-export function BoardsGrid({ initialBoards }: { initialBoards: Board[] }) {
+export function BoardsGrid({
+  initialBoards,
+  archived = false,
+  onArchiveToggle,
+}: {
+  initialBoards: Board[]
+  archived?: boolean
+  onArchiveToggle?: (id: string, nowArchived: boolean) => void
+}) {
   const [boards, setBoards] = useState(initialBoards)
   const [confirmBoard, setConfirmBoard] = useState<Board | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [archiving, setArchiving] = useState<string | null>(null)
 
   const handleDeleteConfirm = async () => {
     if (!confirmBoard) return
@@ -104,51 +114,107 @@ export function BoardsGrid({ initialBoards }: { initialBoards: Board[] }) {
     }
   }
 
+  const handleArchiveToggle = async (board: Board) => {
+    const nowArchived = !board.IS_ARCHIVED
+    setArchiving(board.ID)
+    try {
+      const res = await fetch(`/api/boards/${board.ID}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: nowArchived }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      setBoards((prev) => prev.filter((b) => b.ID !== board.ID))
+      onArchiveToggle?.(board.ID, nowArchived)
+    } catch (err) {
+      alert(`Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+    } finally {
+      setArchiving(null)
+    }
+  }
+
   if (boards.length === 0) {
     return (
-      <div className="text-center py-20 text-gray-400 text-sm">
-        No boards yet.{" "}
-        <Link href="/boards/new" className="text-blue-600 hover:underline">
-          Create your first board
-        </Link>
-      </div>
+      <p className="text-sm text-gray-400 italic py-4">
+        {archived ? "No archived boards." : "No boards yet."}
+      </p>
     )
   }
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${archived ? "opacity-70" : ""}`}>
         {boards.map((board) => (
           <div key={board.ID} className="relative group">
-            <Link
-              href={`/boards/${board.ID}`}
-              className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
-            >
-              <div className="flex items-start justify-between mb-2 pr-6">
-                <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                  {board.NAME}
-                </h2>
-                <span className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
-                  {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
-                </span>
+            {archived ? (
+              /* Archived card — not clickable, muted */
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                <div className="flex items-start justify-between mb-2 pr-14">
+                  <h2 className="text-base font-semibold text-gray-500">{board.NAME}</h2>
+                  <span className="text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
+                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
+                  </span>
+                </div>
+                {board.DESCRIPTION && (
+                  <p className="text-sm text-gray-400 leading-relaxed mb-3">{board.DESCRIPTION}</p>
+                )}
+                <p className="text-xs text-gray-300">Created {board.CREATED_AT}</p>
               </div>
-              {board.DESCRIPTION && (
-                <p className="text-sm text-gray-500 leading-relaxed mb-3">{board.DESCRIPTION}</p>
-              )}
-              <p className="text-xs text-gray-400">Created {board.CREATED_AT}</p>
-              <span className="inline-block mt-3 text-xs font-medium text-blue-600 group-hover:underline">
-                Open board →
-              </span>
-            </Link>
+            ) : (
+              /* Active card */
+              <Link
+                href={`/boards/${board.ID}`}
+                className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+              >
+                <div className="flex items-start justify-between mb-2 pr-14">
+                  <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                    {board.NAME}
+                  </h2>
+                  <span className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
+                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
+                  </span>
+                </div>
+                {board.DESCRIPTION && (
+                  <p className="text-sm text-gray-500 leading-relaxed mb-3">{board.DESCRIPTION}</p>
+                )}
+                <p className="text-xs text-gray-400">Created {board.CREATED_AT}</p>
+                <span className="inline-block mt-3 text-xs font-medium text-blue-600 group-hover:underline">
+                  Open board →
+                </span>
+              </Link>
+            )}
 
-            {/* Delete button */}
-            <button
-              onClick={(e) => { e.preventDefault(); setConfirmBoard(board) }}
-              title="Delete board"
-              className="absolute top-3 right-3 p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10"
-            >
-              <Trash2 size={14} />
-            </button>
+            {/* Action buttons */}
+            <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+              {/* Archive / Restore */}
+              <button
+                onClick={(e) => { e.preventDefault(); handleArchiveToggle(board) }}
+                disabled={archiving === board.ID}
+                title={archived ? "Restore board" : "Archive board"}
+                className={`p-1.5 rounded-md transition-all ${
+                  archived
+                    ? "text-gray-400 hover:text-indigo-500 hover:bg-indigo-50"
+                    : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"
+                } disabled:opacity-40`}
+              >
+                {archiving === board.ID ? (
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-current/40 border-t-current rounded-full animate-spin" />
+                ) : archived ? (
+                  <ArchiveRestore size={14} />
+                ) : (
+                  <Archive size={14} />
+                )}
+              </button>
+
+              {/* Delete */}
+              <button
+                onClick={(e) => { e.preventDefault(); setConfirmBoard(board) }}
+                title="Delete board"
+                className="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>

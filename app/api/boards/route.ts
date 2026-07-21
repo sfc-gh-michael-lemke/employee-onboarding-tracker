@@ -3,14 +3,17 @@ import type { NextRequest } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const archived = req.nextUrl.searchParams.get("archived") === "true"
     const rows = await querySnowflake(`
       SELECT b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT,
+             COALESCE(b.IS_ARCHIVED, FALSE) AS IS_ARCHIVED,
              COUNT(e.ID) AS EMPLOYEE_COUNT
       FROM TEMP.MLEMKE.ONBOARDING_BOARDS b
       LEFT JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.BOARD_ID = b.ID
-      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT
+      WHERE COALESCE(b.IS_ARCHIVED, FALSE) = ${archived ? "TRUE" : "FALSE"}
+      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED
       ORDER BY b.CREATED_AT ASC
     `)
     return Response.json(rows)
