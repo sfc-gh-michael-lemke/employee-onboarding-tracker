@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from "xlsx"
 import { Plus, Trash2, ChevronDown, ChevronRight, FileText, Wrench, Layers } from "lucide-react"
+import { OBJECT_TYPES, type ObjectType } from "@/lib/objectType"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export default function NewBoardPage() {
   const [step, setStep] = useState<Step>("choose")
   const [boardName, setBoardName] = useState("")
   const [nameError, setNameError] = useState(false)
+  const [objectType, setObjectType] = useState<ObjectType>("employee")
 
   // AI flow state
   const [dragOver, setDragOver] = useState(false)
@@ -85,7 +87,7 @@ export default function NewBoardPage() {
     try {
       const res = await fetch("/api/boards", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: boardName.trim(), description: "" }),
+        body: JSON.stringify({ name: boardName.trim(), description: "", objectType }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       const board = await res.json()
@@ -203,7 +205,7 @@ export default function NewBoardPage() {
     try {
       const boardRes = await fetch("/api/boards", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: boardName.trim(), description: "" }),
+        body: JSON.stringify({ name: boardName.trim(), description: "", objectType }),
       })
       if (!boardRes.ok) throw new Error((await boardRes.json()).error)
       const board = await boardRes.json()
@@ -246,7 +248,7 @@ export default function NewBoardPage() {
     try {
       const boardRes = await fetch("/api/boards", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: boardName.trim(), description: "" }),
+        body: JSON.stringify({ name: boardName.trim(), description: "", objectType }),
       })
       if (!boardRes.ok) throw new Error((await boardRes.json()).error)
       const board = await boardRes.json()
@@ -309,6 +311,31 @@ export default function NewBoardPage() {
               }`}
             />
             {nameError && <p className="text-xs text-red-500 mt-1">Please enter a board name first.</p>}
+          </div>
+
+          {/* Object type */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Object type</label>
+            <div className="grid grid-cols-3 gap-3">
+              {OBJECT_TYPES.map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setObjectType(type.value)}
+                  className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center focus:outline-none ${
+                    objectType === type.value
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="text-lg">{type.icon}</span>
+                  <span className={`text-xs font-semibold ${
+                    objectType === type.value ? "text-blue-700" : "text-gray-700"
+                  }`}>{type.label}</span>
+                  <span className="text-[11px] text-gray-400 leading-tight">{type.description}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Three options */}

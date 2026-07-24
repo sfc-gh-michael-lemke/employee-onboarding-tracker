@@ -25,12 +25,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, description } = await req.json()
+    const { name, description, objectType } = await req.json()
     if (!name) return Response.json({ error: "name is required" }, { status: 400 })
+    const validTypes = ["employee", "process", "role_type"]
+    const finalType = validTypes.includes(objectType) ? objectType : "employee"
 
     await querySnowflake(`
-      INSERT INTO TEMP.MLEMKE.ONBOARDING_BOARDS (NAME, DESCRIPTION)
-      VALUES (${sql(name)}, ${sql(description)})
+      INSERT INTO TEMP.MLEMKE.ONBOARDING_BOARDS (NAME, DESCRIPTION, OBJECT_TYPE)
+      VALUES (${sql(name)}, ${sql(description)}, '${finalType}')
     `)
 
     const [board] = (await querySnowflake(`
