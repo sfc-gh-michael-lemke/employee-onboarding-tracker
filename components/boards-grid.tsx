@@ -53,6 +53,11 @@ function DeleteModal({
                 : ""}{" "}
               and all phase configuration. This cannot be undone.
             </p>
+            {loading && (
+              <p className="text-xs text-gray-400 mt-2">
+                May take up to 30s while the warehouse warms up…
+              </p>
+            )}
           </div>
         </div>
 
@@ -105,12 +110,18 @@ export function BoardsGrid({
     if (!confirmBoard) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/boards/${confirmBoard.ID}`, { method: "DELETE" })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 90_000) // 90s
+      const res = await fetch(`/api/boards/${confirmBoard.ID}`, { method: "DELETE", signal: controller.signal })
+      clearTimeout(timeout)
       if (!res.ok) throw new Error((await res.json()).error)
       setBoards((prev) => prev.filter((b) => b.ID !== confirmBoard.ID))
       setConfirmBoard(null)
     } catch (err) {
-      alert(`Failed to delete board: ${err instanceof Error ? err.message : "Unknown error"}`)
+      const msg = err instanceof Error && err.name === "AbortError"
+        ? "Delete timed out — the warehouse may still be processing. Refresh to check."
+        : `Failed to delete board: ${err instanceof Error ? err.message : "Unknown error"}`
+      alert(msg)
     } finally {
       setDeleting(false)
     }

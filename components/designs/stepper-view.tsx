@@ -5,9 +5,9 @@ import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
 import { PhaseSection } from "@/components/phase-section"
 import { EmployeeDrawer } from "@/components/employee-drawer"
-import { CheckCircle2, UserPlus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
+import { CheckCircle2, UserPlus, ChevronLeft, ChevronRight, Trash2, Upload } from "lucide-react"
 
-export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
+export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, onBulkImportClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
   const [focusedPhaseIdx, setFocusedPhaseIdx] = useState(0)
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
@@ -45,9 +45,14 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             {objectPlural} ({employees.length})
           </span>
-          <button onClick={onAddClick} className="text-primary hover:text-primary/80" title="Add new hire">
-            <UserPlus size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={onBulkImportClick} className="text-muted-foreground hover:text-primary" title={`Import ${objectPlural}`}>
+              <Upload size={13} />
+            </button>
+            <button onClick={onAddClick} className="text-primary hover:text-primary/80" title={`Add ${objectSingular}`}>
+              <UserPlus size={14} />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {employees.length === 0 ? (

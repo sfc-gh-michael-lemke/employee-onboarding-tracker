@@ -5,6 +5,7 @@ import type { Employee } from "@/app/page"
 import type { Phase } from "@/lib/phases"
 import { PHASES } from "@/lib/phases"
 import { AddEmployeeDialog } from "@/components/add-employee-dialog"
+import { BulkImportDialog } from "@/components/bulk-import-dialog"
 import { KanbanView } from "@/components/designs/kanban-view"
 import { DashboardView } from "@/components/designs/dashboard-view"
 import { StepperView } from "@/components/designs/stepper-view"
@@ -21,6 +22,7 @@ export interface ViewProps {
   onDelete: (id: string) => void
   onSaveNotes: (id: string, notes: string) => Promise<void>
   onAddClick: () => void
+  onBulkImportClick: () => void
   phases: Phase[]
   boardId?: string
   objectSingular: string
@@ -55,6 +57,7 @@ export function OnboardingApp({
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployees[0]?.ID ?? null)
   const [showAdd, setShowAdd] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [design, setDesign] = useState<Design>("kanban")
 
   // Poll for checklist updates (e.g. auto-checks from /phases)
@@ -140,6 +143,25 @@ export function OnboardingApp({
     setShowAdd(false)
   }
 
+  const handleBulkImported = (newEmployees: Array<Record<string, string>>) => {
+    const mapped = newEmployees.map((emp) => ({
+      ID: emp.ID,
+      FULL_NAME: emp.FULL_NAME ?? "",
+      TITLE: emp.TITLE ?? "",
+      START_DATE: emp.START_DATE ?? "",
+      MANAGER: emp.MANAGER ?? "",
+      TERRITORY: emp.TERRITORY ?? "",
+      NOTES: emp.NOTES ?? "",
+      EMAIL: emp.EMAIL ?? "",
+      CREATED_AT: emp.CREATED_AT ?? "",
+      checklist: {},
+      checkedCount: 0,
+      currentPhase: phases[0]?.key ?? "done",
+    } as unknown as import("@/app/page").Employee))
+    setEmployees((prev) => [...mapped, ...prev])
+    if (!selectedId && mapped.length > 0) setSelectedId(mapped[0].ID)
+  }
+
   const viewProps: ViewProps = {
     employees,
     selectedId,
@@ -148,6 +170,7 @@ export function OnboardingApp({
     onDelete: handleDelete,
     onSaveNotes: handleSaveNotes,
     onAddClick: () => setShowAdd(true),
+    onBulkImportClick: () => setShowBulkImport(true),
     phases,
     boardId,
     objectSingular: objInfo.singular,
@@ -196,6 +219,16 @@ export function OnboardingApp({
       </div>
 
       {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onSubmit={handleAddEmployee} objectSingular={objInfo.singular} />}
+      {showBulkImport && boardId && (
+        <BulkImportDialog
+          boardId={boardId}
+          boardName={boardName ?? ""}
+          objectSingular={objInfo.singular}
+          objectPlural={objInfo.plural}
+          onClose={() => setShowBulkImport(false)}
+          onImported={handleBulkImported}
+        />
+      )}
     </div>
   )
 }

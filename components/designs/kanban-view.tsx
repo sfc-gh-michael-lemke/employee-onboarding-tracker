@@ -4,10 +4,10 @@ import { useState, useRef } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
 import { EmployeeDrawer } from "@/components/employee-drawer"
-import { CheckCircle2, Clock, UserPlus, GripVertical } from "lucide-react"
+import { CheckCircle2, Clock, UserPlus, GripVertical, Upload } from "lucide-react"
 import type { Phase } from "@/lib/phases"
 
-export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees", objectIcon = "👤" }: ViewProps) {
+export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, onBulkImportClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees", objectIcon = "👤" }: ViewProps) {
   const [drawerId, setDrawerId]     = useState<string | null>(null)
   const [dragOver, setDragOver]     = useState<string | null>(null)
   const [dragging, setDragging]     = useState<string | null>(null)
@@ -71,12 +71,20 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
             Drag a card to advance to a later phase
           </span>
         </div>
-        <button
-          onClick={onAddClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <UserPlus size={13} /> Add {objectSingular}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBulkImportClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border text-muted-foreground rounded-lg hover:bg-muted/60 transition-colors"
+          >
+            <Upload size={12} /> Import
+          </button>
+          <button
+            onClick={onAddClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <UserPlus size={13} /> Add {objectSingular}
+          </button>
+        </div>
       </div>
 
       {/* Board */}

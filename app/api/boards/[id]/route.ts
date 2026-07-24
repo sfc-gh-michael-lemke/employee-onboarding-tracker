@@ -2,6 +2,7 @@ import { querySnowflake } from "@/lib/snowflake"
 import type { NextRequest } from "next/server"
 
 export const dynamic = "force-dynamic"
+export const maxDuration = 120 // 2 min — warehouse may need to resume
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

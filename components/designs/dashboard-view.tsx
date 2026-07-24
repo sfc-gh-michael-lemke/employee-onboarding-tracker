@@ -4,11 +4,11 @@ import { useState } from "react"
 import type { Employee } from "@/app/page"
 import type { ViewProps } from "@/components/onboarding-app"
 import { EmployeeDrawer } from "@/components/employee-drawer"
-import { UserPlus, ChevronUp, ChevronDown, CheckCircle2, Clock, Users, TrendingUp, Award } from "lucide-react"
+import { UserPlus, ChevronUp, ChevronDown, CheckCircle2, Clock, Users, TrendingUp, Award, Upload } from "lucide-react"
 
 type SortKey = "FULL_NAME" | "START_DATE" | "currentPhase" | "checkedCount"
 
-export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
+export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick, onBulkImportClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>("START_DATE")
   const [sortAsc, setSortAsc] = useState(true)
@@ -60,12 +60,20 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
       {/* Table toolbar */}
       <div className="flex items-center justify-between px-6 py-2 border-b border-border shrink-0">
         <span className="text-sm font-medium">All {objectPlural}</span>
-        <button
-          onClick={onAddClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <UserPlus size={13} /> Add {objectSingular}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBulkImportClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border text-muted-foreground rounded-lg hover:bg-muted/60 transition-colors"
+          >
+            <Upload size={12} /> Import
+          </button>
+          <button
+            onClick={onAddClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <UserPlus size={13} /> Add {objectSingular}
+          </button>
+        </div>
       </div>
 
       {/* Table */}
