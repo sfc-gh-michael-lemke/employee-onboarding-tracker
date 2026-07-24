@@ -7,7 +7,7 @@ import { EmployeeDrawer } from "@/components/employee-drawer"
 import { CheckCircle2, Clock, UserPlus, GripVertical } from "lucide-react"
 import type { Phase } from "@/lib/phases"
 
-export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
+export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees", objectIcon = "👤" }: ViewProps) {
   const [drawerId, setDrawerId]     = useState<string | null>(null)
   const [dragOver, setDragOver]     = useState<string | null>(null)
   const [dragging, setDragging]     = useState<string | null>(null)
@@ -65,7 +65,7 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-foreground">
-            {employees.length} employee{employees.length !== 1 ? "s" : ""} in onboarding
+            {employees.length} {employees.length !== 1 ? objectPlural.toLowerCase() : objectSingular.toLowerCase()} on board
           </span>
           <span className="text-xs text-muted-foreground italic hidden sm:inline">
             Drag a card to advance to a later phase
@@ -75,7 +75,7 @@ export function KanbanView({ employees, selectedId, onSelect, onToggleCheck, onD
           onClick={onAddClick}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
-          <UserPlus size={13} /> Add New Hire
+          <UserPlus size={13} /> Add {objectSingular}
         </button>
       </div>
 

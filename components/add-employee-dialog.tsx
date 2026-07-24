@@ -15,9 +15,11 @@ interface FormData {
 export function AddEmployeeDialog({
   onClose,
   onSubmit,
+  objectSingular = "Employee",
 }: {
   onClose: () => void
   onSubmit: (data: FormData) => Promise<void>
+  objectSingular?: string
 }) {
   const [form, setForm] = useState<FormData>({
     fullName: "",
@@ -50,7 +52,7 @@ export function AddEmployeeDialog({
     >
       <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-base font-semibold">Add New Hire</h2>
+          <h2 className="text-base font-semibold">Add {objectSingular}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={16} />
           </button>
@@ -131,7 +133,7 @@ export function AddEmployeeDialog({
               disabled={loading || !form.fullName.trim()}
               className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors font-medium"
             >
-              {loading ? "Adding…" : "Add Employee"}
+              {loading ? "Adding…" : `Add ${objectSingular}`}
             </button>
           </div>
         </form>

@@ -12,6 +12,7 @@ interface Board {
   CREATED_AT: string
   EMPLOYEE_COUNT: number
   IS_ARCHIVED?: boolean
+  OBJECT_TYPE?: string
 }
 
 export function BoardsPageClient({

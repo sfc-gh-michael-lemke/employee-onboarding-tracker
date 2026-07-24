@@ -9,11 +9,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const [board] = (await querySnowflake(`
       SELECT b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT,
              COALESCE(b.IS_ARCHIVED, FALSE) AS IS_ARCHIVED,
+             COALESCE(b.OBJECT_TYPE, 'employee') AS OBJECT_TYPE,
              COUNT(e.ID) AS EMPLOYEE_COUNT
       FROM TEMP.MLEMKE.ONBOARDING_BOARDS b
       LEFT JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.BOARD_ID = b.ID
       WHERE b.ID = '${id.replace(/'/g, "''")}'
-      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED
+      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED, b.OBJECT_TYPE
     `)) as Array<Record<string, string>>
 
     if (!board) return Response.json({ error: "Not found" }, { status: 404 })
@@ -27,10 +28,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const safe = id.replace(/'/g, "''")
-    const { archived } = await req.json()
+    const body = await req.json()
+    const sets: string[] = []
+    if ("archived" in body) sets.push(`IS_ARCHIVED = ${body.archived ? "TRUE" : "FALSE"}`)
+    if ("object_type" in body && typeof body.object_type === "string") {
+      const validTypes = ["employee", "process", "role_type"]
+      if (!validTypes.includes(body.object_type)) throw new Error("Invalid object_type")
+      sets.push(`OBJECT_TYPE = '${body.object_type}'`)
+    }
+    if (sets.length === 0) return Response.json({ error: "Nothing to update" }, { status: 400 })
     await querySnowflake(`
       UPDATE TEMP.MLEMKE.ONBOARDING_BOARDS
-      SET IS_ARCHIVED = ${archived ? "TRUE" : "FALSE"}
+      SET ${sets.join(", ")}
       WHERE ID = '${safe}'
     `)
     return Response.json({ ok: true })

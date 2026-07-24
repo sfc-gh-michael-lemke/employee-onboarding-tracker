@@ -7,7 +7,7 @@ import { PhaseSection } from "@/components/phase-section"
 import { EmployeeDrawer } from "@/components/employee-drawer"
 import { CheckCircle2, UserPlus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 
-export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
+export function StepperView({ employees, selectedId, onSelect, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
   const [focusedPhaseIdx, setFocusedPhaseIdx] = useState(0)
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
@@ -43,7 +43,7 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
       <aside className="w-56 shrink-0 border-r border-border flex flex-col">
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Employees ({employees.length})
+            {objectPlural} ({employees.length})
           </span>
           <button onClick={onAddClick} className="text-primary hover:text-primary/80" title="Add new hire">
             <UserPlus size={14} />
@@ -51,7 +51,7 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
         </div>
         <div className="flex-1 overflow-y-auto">
           {employees.length === 0 ? (
-            <div className="p-4 text-xs text-muted-foreground text-center">No employees yet.</div>
+            <div className="p-4 text-xs text-muted-foreground text-center">No {objectPlural.toLowerCase()} yet.</div>
           ) : (
             employees.map((emp) => {
               const isDone = emp.currentPhase === "done"
@@ -88,7 +88,7 @@ export function StepperView({ employees, selectedId, onSelect, onToggleCheck, on
       <main className="flex-1 overflow-y-auto">
         {!selected ? (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-            Select an employee to view their onboarding progress.
+            Select a {objectSingular.toLowerCase()} to view their progress.
           </div>
         ) : (
           <div className="max-w-2xl mx-auto px-6 py-5">

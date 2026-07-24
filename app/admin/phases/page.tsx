@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import type { Phase } from "@/lib/phases"
+import { OBJECT_TYPES, getObjectTypeInfo, type ObjectType } from "@/lib/objectType"
 
 // ── Inline editable field ────────────────────────────────────────────────────
 function EditableField({
@@ -183,8 +184,11 @@ export default function PhasesPage() {
   const [results, setResults]       = useState<Record<string, QueryResult | null>>({})
 
   // Board selector — default to first board once loaded
-  const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string }>>([])  
+  const [boards, setBoards]       = useState<Array<{ ID: string; NAME: string; OBJECT_TYPE?: string }>>([])  
   const [boardId, setBoardId]     = useState<string>("")
+  const [objectType, setObjectType] = useState<ObjectType>("employee")
+  const [savingType, setSavingType] = useState(false)
+  const [savedType, setSavedType]   = useState(false)
 
   // Phase order / visibility (localStorage, keyed per board)
   const [phaseOrder, setPhaseOrder]     = useState<string[]>([])
@@ -209,11 +213,38 @@ export default function PhasesPage() {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setBoards(data)
-          setBoardId(prev => prev || data[0].ID)
+          const first = data[0]
+          setBoardId(prev => prev || first.ID)
+          setObjectType((first.OBJECT_TYPE as ObjectType) ?? "employee")
         }
       })
       .catch(() => {})
   }, [])
+
+  // Sync object type when board changes
+  useEffect(() => {
+    const board = boards.find(b => b.ID === boardId)
+    if (board) setObjectType((board.OBJECT_TYPE as ObjectType) ?? "employee")
+  }, [boardId, boards])
+
+  async function handleObjectTypeChange(type: ObjectType) {
+    if (type === objectType) return
+    setObjectType(type)
+    setSavingType(true)
+    setSavedType(false)
+    try {
+      await fetch(`/api/boards/${boardId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ object_type: type }),
+      })
+      setBoards(prev => prev.map(b => b.ID === boardId ? { ...b, OBJECT_TYPE: type } : b))
+      setSavedType(true)
+      setTimeout(() => setSavedType(false), 2000)
+    } finally {
+      setSavingType(false)
+    }
+  }
 
   // Load phases whenever boardId changes; reset order/visibility from localStorage
   useEffect(() => {
@@ -366,6 +397,39 @@ export default function PhasesPage() {
 
         </div>
       </div>
+
+      {/* Object Type Selector */}
+      {boardId && (
+        <div className="mb-5 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Board Object</h2>
+            {savingType && <span className="text-xs text-blue-500 animate-pulse">Saving…</span>}
+            {savedType && <span className="text-xs text-green-600 font-medium">✓ Saved</span>}
+          </div>
+          <div className="flex gap-3">
+            {OBJECT_TYPES.map(type => (
+              <button
+                key={type.value}
+                onClick={() => handleObjectTypeChange(type.value)}
+                className={`flex-1 flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg border-2 transition-all ${
+                  objectType === type.value
+                    ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <span className="text-xl">{type.icon}</span>
+                <span className={`text-sm font-semibold ${
+                  objectType === type.value ? "text-indigo-700" : "text-gray-700"
+                }`}>{type.label}</span>
+                <span className="text-xs text-gray-400 text-center leading-snug">{type.description}</span>
+                {objectType === type.value && (
+                  <span className="mt-1 text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">Selected</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sticky control bar — Run All button lives INSIDE the flex row */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border border-gray-200 rounded-xl px-4 py-2.5 mb-5 shadow-sm">

@@ -9,6 +9,7 @@ import { KanbanView } from "@/components/designs/kanban-view"
 import { DashboardView } from "@/components/designs/dashboard-view"
 import { StepperView } from "@/components/designs/stepper-view"
 import { LayoutGrid, LayoutList, GitBranch } from "lucide-react"
+import { getObjectTypeInfo } from "@/lib/objectType"
 
 type Design = "kanban" | "dashboard" | "stepper"
 
@@ -22,6 +23,9 @@ export interface ViewProps {
   onAddClick: () => void
   phases: Phase[]
   boardId?: string
+  objectSingular: string
+  objectPlural: string
+  objectIcon: string
 }
 
 const DESIGNS: { key: Design; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
@@ -36,14 +40,17 @@ export function OnboardingApp({
   boardId,
   boardName,
   boardPhases,
+  objectType = "employee",
 }: {
   initialEmployees: Employee[]
   initialError: string | null
   boardId?: string
   boardName?: string
   boardPhases?: Phase[]
+  objectType?: string
 }) {
   const phases = boardPhases ?? PHASES
+  const objInfo = getObjectTypeInfo(objectType)
 
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployees[0]?.ID ?? null)
@@ -96,7 +103,7 @@ export function OnboardingApp({
   }
 
   const handleDelete = (id: string) => {
-    if (!confirm("Remove this employee from onboarding?")) return
+    if (!confirm(`Remove this ${objInfo.singular.toLowerCase()} from the board?`)) return
     fetch(`/api/employees/${id}`, { method: "DELETE" })
     setEmployees((prev) => prev.filter((e) => e.ID !== id))
     if (selectedId === id) {
@@ -143,6 +150,9 @@ export function OnboardingApp({
     onAddClick: () => setShowAdd(true),
     phases,
     boardId,
+    objectSingular: objInfo.singular,
+    objectPlural: objInfo.plural,
+    objectIcon: objInfo.icon,
   }
 
   if (initialError) {
@@ -158,7 +168,9 @@ export function OnboardingApp({
       {/* Design switcher bar */}
       <div className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 shrink-0">
         {boardName && (
-          <span className="text-xs font-semibold text-foreground mr-3">{boardName}</span>
+          <span className="text-xs font-semibold text-foreground mr-3">
+            <span className="mr-1">{objInfo.icon}</span>{boardName}
+          </span>
         )}
         <span className="text-xs text-muted-foreground mr-2">Layout:</span>
         {DESIGNS.map(({ key, label, Icon }) => (
@@ -183,7 +195,7 @@ export function OnboardingApp({
         {design === "stepper" && <StepperView {...viewProps} />}
       </div>
 
-      {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onSubmit={handleAddEmployee} />}
+      {showAdd && <AddEmployeeDialog onClose={() => setShowAdd(false)} onSubmit={handleAddEmployee} objectSingular={objInfo.singular} />}
     </div>
   )
 }

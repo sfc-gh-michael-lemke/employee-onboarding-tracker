@@ -4,6 +4,7 @@ import type { Phase } from "@/lib/phases"
 import { OnboardingApp } from "@/components/onboarding-app"
 import { notFound } from "next/navigation"
 import type { Employee } from "@/app/page"
+import { getObjectTypeInfo } from "@/lib/objectType"
 
 export const dynamic = "force-dynamic"
 
@@ -24,14 +25,17 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
   let error: string | null = null
   let boardName = ""
   let boardPhases: Phase[] = []
+  let objectType = "employee"
 
   try {
     const [board] = (await querySnowflake(`
-      SELECT ID, NAME FROM TEMP.MLEMKE.ONBOARDING_BOARDS WHERE ID = '${id.replace(/'/g, "''")}'
-    `)) as Array<{ ID: string; NAME: string }>
+      SELECT ID, NAME, COALESCE(OBJECT_TYPE, 'employee') AS OBJECT_TYPE
+      FROM TEMP.MLEMKE.ONBOARDING_BOARDS WHERE ID = '${id.replace(/'/g, "''")}'
+    `)) as Array<{ ID: string; NAME: string; OBJECT_TYPE: string }>
 
     if (!board) notFound()
     boardName = board.NAME
+    objectType = board.OBJECT_TYPE ?? "employee"
 
     const safeId = id.replace(/'/g, "''")
 
@@ -120,6 +124,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
       boardId={id}
       boardName={boardName}
       boardPhases={boardPhases.length > 0 ? boardPhases : undefined}
+      objectType={objectType}
     />
   )
 }

@@ -9,11 +9,12 @@ export async function GET(req: NextRequest) {
     const rows = await querySnowflake(`
       SELECT b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT,
              COALESCE(b.IS_ARCHIVED, FALSE) AS IS_ARCHIVED,
+             COALESCE(b.OBJECT_TYPE, 'employee') AS OBJECT_TYPE,
              COUNT(e.ID) AS EMPLOYEE_COUNT
       FROM TEMP.MLEMKE.ONBOARDING_BOARDS b
       LEFT JOIN TEMP.MLEMKE.ONBOARDING_EMPLOYEES e ON e.BOARD_ID = b.ID
       WHERE COALESCE(b.IS_ARCHIVED, FALSE) = ${archived ? "TRUE" : "FALSE"}
-      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED
+      GROUP BY b.ID, b.NAME, b.DESCRIPTION, b.CREATED_AT, b.IS_ARCHIVED, b.OBJECT_TYPE
       ORDER BY b.CREATED_AT ASC
     `)
     return Response.json(rows)

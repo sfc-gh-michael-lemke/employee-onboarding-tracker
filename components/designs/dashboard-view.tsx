@@ -8,7 +8,7 @@ import { UserPlus, ChevronUp, ChevronDown, CheckCircle2, Clock, Users, TrendingU
 
 type SortKey = "FULL_NAME" | "START_DATE" | "currentPhase" | "checkedCount"
 
-export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId }: ViewProps) {
+export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes, onAddClick, phases, boardId, objectSingular = "Employee", objectPlural = "Employees" }: ViewProps) {
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>("START_DATE")
   const [sortAsc, setSortAsc] = useState(true)
@@ -51,7 +51,7 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
     <div className="flex flex-col h-full overflow-hidden">
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-border shrink-0">
-        <KpiCard icon={<Users size={18} className="text-primary" />} label="Total New Hires" value={employees.length} />
+        <KpiCard icon={<Users size={18} className="text-primary" />} label={`Total ${objectPlural}`} value={employees.length} />
         <KpiCard icon={<Clock size={18} className="text-amber-500" />} label="In Progress" value={inProgress} />
         <KpiCard icon={<CheckCircle2 size={18} className="text-emerald-500" />} label="Complete" value={done} />
         <KpiCard icon={<TrendingUp size={18} className="text-blue-500" />} label="Avg Completion" value={`${avgPct}%`} />
@@ -59,12 +59,12 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
 
       {/* Table toolbar */}
       <div className="flex items-center justify-between px-6 py-2 border-b border-border shrink-0">
-        <span className="text-sm font-medium">All Employees</span>
+        <span className="text-sm font-medium">All {objectPlural}</span>
         <button
           onClick={onAddClick}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
-          <UserPlus size={13} /> Add New Hire
+          <UserPlus size={13} /> Add {objectSingular}
         </button>
       </div>
 
@@ -84,7 +84,7 @@ export function DashboardView({ employees, onToggleCheck, onDelete, onSaveNotes,
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground text-sm">
-                  No employees yet. Click &quot;Add New Hire&quot; to get started.
+                  No {objectPlural.toLowerCase()} yet. Click &quot;Add {objectSingular}&quot; to get started.
                 </td>
               </tr>
             ) : (

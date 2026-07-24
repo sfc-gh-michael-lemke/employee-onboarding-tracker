@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Trash2, AlertTriangle, X, Archive, ArchiveRestore } from "lucide-react"
+import { getObjectTypeInfo } from "@/lib/objectType"
 
 interface Board {
   ID: string
@@ -11,6 +12,7 @@ interface Board {
   CREATED_AT: string
   EMPLOYEE_COUNT: number
   IS_ARCHIVED?: boolean
+  OBJECT_TYPE?: string
 }
 
 function DeleteModal({
@@ -144,7 +146,9 @@ export function BoardsGrid({
   return (
     <>
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${archived ? "opacity-70" : ""}`}>
-        {boards.map((board) => (
+        {boards.map((board) => {
+          const objInfo = getObjectTypeInfo(board.OBJECT_TYPE)
+          return (
           <div key={board.ID} className="relative group">
             {archived ? (
               /* Archived card — not clickable, muted */
@@ -152,13 +156,16 @@ export function BoardsGrid({
                 <div className="flex items-start justify-between mb-2 pr-14">
                   <h2 className="text-base font-semibold text-gray-500">{board.NAME}</h2>
                   <span className="text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
-                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
+                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? objInfo.singular.toLowerCase() : objInfo.plural.toLowerCase()}
                   </span>
                 </div>
                 {board.DESCRIPTION && (
                   <p className="text-sm text-gray-400 leading-relaxed mb-3">{board.DESCRIPTION}</p>
                 )}
-                <p className="text-xs text-gray-300">Created {board.CREATED_AT}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-300">Created {board.CREATED_AT}</span>
+                  <span className="text-xs font-medium text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">{objInfo.icon} {objInfo.label}</span>
+                </div>
               </div>
             ) : (
               /* Active card */
@@ -171,14 +178,17 @@ export function BoardsGrid({
                     {board.NAME}
                   </h2>
                   <span className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
-                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? "employee" : "employees"}
+                    {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? objInfo.singular.toLowerCase() : objInfo.plural.toLowerCase()}
                   </span>
                 </div>
                 {board.DESCRIPTION && (
                   <p className="text-sm text-gray-500 leading-relaxed mb-3">{board.DESCRIPTION}</p>
                 )}
-                <p className="text-xs text-gray-400">Created {board.CREATED_AT}</p>
-                <span className="inline-block mt-3 text-xs font-medium text-blue-600 group-hover:underline">
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-400">Created {board.CREATED_AT}</span>
+                  <span className="text-xs font-medium text-indigo-500 bg-indigo-50 rounded-full px-2 py-0.5">{objInfo.icon} {objInfo.label}</span>
+                </div>
+                <span className="inline-block mt-2 text-xs font-medium text-blue-600 group-hover:underline">
                   Open board →
                 </span>
               </Link>
@@ -216,7 +226,8 @@ export function BoardsGrid({
               </button>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {confirmBoard && (
