@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { BoardsGrid } from "@/components/boards-grid"
@@ -15,33 +15,57 @@ interface Board {
   OBJECT_TYPE?: string
 }
 
-export function BoardsPageClient({
-  initialActive,
-  initialArchived,
-}: {
-  initialActive: Board[]
-  initialArchived: Board[]
-}) {
-  const [active, setActive] = useState(initialActive)
-  const [archived, setArchived] = useState(initialArchived)
+export function BoardsPageClient() {
+  const [active, setActive] = useState<Board[]>([])
+  const [archived, setArchived] = useState<Board[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/boards").then((r) => r.json()),
+      fetch("/api/boards?archived=true").then((r) => r.json()),
+    ])
+      .then(([a, ar]) => {
+        if (a.error) throw new Error(a.error)
+        setActive(Array.isArray(a) ? a : [])
+        setArchived(ar.error || !Array.isArray(ar) ? [] : ar)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load boards"))
+      .finally(() => setLoading(false))
+  }, [])
 
   function handleArchiveToggle(id: string, nowArchived: boolean) {
     if (nowArchived) {
-      // Move from active → archived
       const board = active.find((b) => b.ID === id)
       if (board) {
         setActive((prev) => prev.filter((b) => b.ID !== id))
         setArchived((prev) => [{ ...board, IS_ARCHIVED: true }, ...prev])
       }
     } else {
-      // Move from archived → active
       const board = archived.find((b) => b.ID === id)
       if (board) {
         setArchived((prev) => prev.filter((b) => b.ID !== id))
         setActive((prev) => [...prev, { ...board, IS_ARCHIVED: false }])
       }
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+        {error}
+      </div>
+    )
   }
 
   return (
@@ -67,7 +91,6 @@ export function BoardsPageClient({
         <BoardsGrid initialBoards={active} onArchiveToggle={handleArchiveToggle} />
       )}
 
-      {/* Archived section */}
       {archived.length > 0 && (
         <div className="mt-10 border-t border-gray-100 pt-6">
           <button
