@@ -92,6 +92,14 @@ function DeleteModal({
   )
 }
 
+function formatDate(dateStr: string): string {
+  try {
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  } catch {
+    return dateStr.slice(0, 10)
+  }
+}
+
 export function BoardsGrid({
   initialBoards,
   archived = false,
@@ -163,45 +171,52 @@ export function BoardsGrid({
           <div key={board.ID} className="relative group">
             {archived ? (
               /* Archived card — not clickable, muted */
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
-                <div className="flex items-start justify-between mb-2 pr-14">
-                  <h2 className="text-base font-semibold text-gray-500">{board.NAME}</h2>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
+              <div className="flex flex-col rounded-xl border border-gray-200 bg-gray-50 p-5 h-full">
+                <div className="flex items-start justify-between gap-3 mb-3 pr-10">
+                  <h2 className="text-sm font-semibold text-gray-500 leading-snug line-clamp-2">{board.NAME}</h2>
+                  <span className="shrink-0 text-xs text-gray-400 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-0.5 whitespace-nowrap">
                     {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? objInfo.singular.toLowerCase() : objInfo.plural.toLowerCase()}
                   </span>
                 </div>
-                {board.DESCRIPTION && (
-                  <p className="text-sm text-gray-400 leading-relaxed mb-3">{board.DESCRIPTION}</p>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-gray-300">Created {board.CREATED_AT}</span>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">{objInfo.icon} {objInfo.label}</span>
+                <div className="h-9 mb-4 overflow-hidden">
+                  {board.DESCRIPTION && (
+                    <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{board.DESCRIPTION}</p>
+                  )}
+                </div>
+                <div className="mt-auto flex items-center justify-between">
+                  <span className="text-xs text-gray-300">{formatDate(board.CREATED_AT)}</span>
+                  <span className="text-xs font-medium text-gray-400 bg-gray-100 rounded-full px-2.5 py-0.5">{objInfo.icon} {objInfo.label}</span>
                 </div>
               </div>
             ) : (
               /* Active card */
               <Link
                 href={`/boards/${board.ID}`}
-                className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+                className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all h-full"
               >
-                <div className="flex items-start justify-between mb-2 pr-14">
-                  <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                {/* Title row */}
+                <div className="flex items-start justify-between gap-3 mb-3 pr-10">
+                  <h2 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-snug line-clamp-2">
                     {board.NAME}
                   </h2>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5 ml-2 shrink-0">
+                  <span className="shrink-0 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5 whitespace-nowrap">
                     {board.EMPLOYEE_COUNT} {board.EMPLOYEE_COUNT === 1 ? objInfo.singular.toLowerCase() : objInfo.plural.toLowerCase()}
                   </span>
                 </div>
-                {board.DESCRIPTION && (
-                  <p className="text-sm text-gray-500 leading-relaxed mb-3">{board.DESCRIPTION}</p>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-gray-400">Created {board.CREATED_AT}</span>
-                  <span className="text-xs font-medium text-indigo-500 bg-indigo-50 rounded-full px-2 py-0.5">{objInfo.icon} {objInfo.label}</span>
+                {/* Description slot — fixed height keeps all cards uniform */}
+                <div className="h-9 mb-4 overflow-hidden">
+                  {board.DESCRIPTION && (
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{board.DESCRIPTION}</p>
+                  )}
                 </div>
-                <span className="inline-block mt-2 text-xs font-medium text-blue-600 group-hover:underline">
-                  Open board →
-                </span>
+                {/* Footer: date + type badge */}
+                <div className="mt-auto flex items-center justify-between">
+                  <span className="text-xs text-gray-400">{formatDate(board.CREATED_AT)}</span>
+                  <span className="text-xs font-medium text-indigo-500 bg-indigo-50 rounded-full px-2.5 py-0.5">{objInfo.icon} {objInfo.label}</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-xs font-medium text-blue-600 group-hover:underline">Open board →</span>
+                </div>
               </Link>
             )}
 
