@@ -61,6 +61,7 @@ export default function NewBoardPage() {
   const [boardName, setBoardName] = useState("")
   const [nameError, setNameError] = useState(false)
   const [objectType, setObjectType] = useState<ObjectType>("employee")
+  const [showExplainer, setShowExplainer] = useState(false)
 
   // AI flow state
   const [dragOver, setDragOver] = useState(false)
@@ -296,44 +297,45 @@ export default function NewBoardPage() {
             <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{createError}</div>
           )}
 
-          {/* Concept explainer */}
-          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 p-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-3">How it works</p>
+          {/* Concept explainer — collapsed by default */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowExplainer(s => !s)}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors group"
+            >
+              <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full border text-[10px] font-bold transition-colors ${
+                showExplainer ? "border-blue-300 text-blue-500 bg-blue-50" : "border-gray-300 text-gray-400 group-hover:border-gray-400"
+              }`}>?</span>
+              <span>How it works</span>
+              <span className={`transition-transform duration-200 ${showExplainer ? "rotate-180" : ""}`}>▾</span>
+            </button>
 
-            {/* Flow diagram */}
-            <div className="flex items-stretch gap-1.5 mb-5 overflow-x-auto pb-1">
-              {[
-                { label: "Board", color: "bg-violet-100 border-violet-200 text-violet-800", dot: "bg-violet-400", desc: "The top-level container — one board per program, team, or initiative." },
-                { label: "Phase", color: "bg-blue-100 border-blue-200 text-blue-800", dot: "bg-blue-400", desc: "A named stage in the process (e.g. \"Week 1\", \"Ramp\", \"Certified\")." },
-                { label: "Task", color: "bg-cyan-100 border-cyan-200 text-cyan-800", dot: "bg-cyan-500", desc: "A step the object must complete within a phase (e.g. \"Complete onboarding doc\")." },
-                { label: "Test", color: "bg-emerald-100 border-emerald-200 text-emerald-800", dot: "bg-emerald-500", desc: "An optional SQL query that auto-verifies a task is done — runs against Snowflake data." },
-              ].map((item, i, arr) => (
-                <div key={item.label} className="flex items-center gap-1.5 flex-shrink-0">
-                  <div className={`flex flex-col gap-1 px-3 py-2.5 rounded-xl border text-center min-w-[88px] ${item.color}`}>
-                    <span className="text-[11px] font-bold tracking-wide">{item.label}</span>
-                    <span className="text-[10px] leading-snug opacity-75 hidden sm:block">{item.desc}</span>
-                  </div>
-                  {i < arr.length - 1 && (
-                    <span className="text-gray-300 text-base font-light flex-shrink-0">→</span>
-                  )}
+            {showExplainer && (
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                {/* Compact flow */}
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {[
+                    { label: "Board",   desc: "container",       color: "text-violet-600 bg-violet-50 border-violet-200" },
+                    { label: "Phase",   desc: "stage",           color: "text-blue-600   bg-blue-50   border-blue-200"   },
+                    { label: "Task",    desc: "step",            color: "text-cyan-600   bg-cyan-50   border-cyan-200"   },
+                    { label: "Test",    desc: "SQL auto-check",  color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+                    { label: "Object",  desc: "what moves",      color: "text-indigo-600 bg-indigo-50 border-indigo-200" },
+                  ].map((item, i, arr) => (
+                    <span key={item.label} className="flex items-center gap-2">
+                      <span className={`inline-flex flex-col items-center px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${item.color}`}>
+                        {item.label}
+                        <span className="text-[10px] font-normal opacity-60">{item.desc}</span>
+                      </span>
+                      {i < arr.length - 1 && <span className="text-gray-300 text-xs">→</span>}
+                    </span>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            {/* Object callout */}
-            <div className="flex items-start gap-3 rounded-xl bg-white/70 border border-blue-100 px-4 py-3">
-              <span className="text-lg mt-0.5">👤</span>
-              <div>
-                <span className="text-xs font-semibold text-gray-800">Object </span>
-                <span className="text-xs text-gray-500">— the thing moving through the process. </span>
-                <span className="text-xs text-gray-500">Each object (an employee, a process, or a role type) tracks its own progress independently across all phases and tasks. You pick the object type below.</span>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  A board holds one process. A process has phases. Each phase has tasks. Each task can optionally have a SQL test that auto-checks completion. Objects (employees, processes, role types) each track their own progress independently.
+                </p>
               </div>
-            </div>
-
-            {/* One-liner summary */}
-            <p className="text-[11px] text-blue-400 mt-3 leading-relaxed">
-              A board holds one <span className="font-semibold">process</span>. A process has <span className="font-semibold">phases</span>. Each phase has <span className="font-semibold">tasks</span>. Each task can have a SQL <span className="font-semibold">test</span> that auto-checks completion. Your <span className="font-semibold">objects</span> move through the process one task at a time.
-            </p>
+            )}
           </div>
 
           {/* Board name */}
